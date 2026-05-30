@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v12</title>
+<title>保單智能分析系統 v13</title>
 <style>
 /* Google Fonts removed for local file compatibility */
 :root{
@@ -117,8 +117,9 @@ main{max-width:1120px;margin:0 auto;padding:24px 18px 80px;}
 .pdf-tabs{display:flex;gap:3px;margin-bottom:12px;}
 .ptab{padding:9px 18px;border-radius:6px 6px 0 0;font-size:.9rem;cursor:pointer;border:1px solid var(--border);background:transparent;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;color:var(--muted);transition:all .2s;}
 .ptab.active{background:var(--card);border-bottom-color:var(--card);color:var(--ink);font-weight:500;}
-.upload-zone{border:2px dashed var(--border);border-radius:9px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .3s;position:relative;}
+.upload-zone{border:2px dashed var(--border);border-radius:9px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .3s;}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(200,169,110,.05);}
+  .upload-zone:active{transform:scale(.99);background:rgba(200,169,110,.1);}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
 .uz-ic{font-size:1.7rem;margin-bottom:6px;}
 .upload-zone h3{font-size:1.05rem;margin-bottom:3px;}
@@ -395,7 +396,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Deep Research 補強</p></div>
-  <span class="hbadge">v12 隱私優先</span>
+  <span class="hbadge">v13 隱私優先</span>
 </header>
 <main>
 
@@ -997,12 +998,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
       </div>
 
       <div class="warnbox"><span>🔒</span><span>上傳後在瀏覽器本機解密，密碼不離開您的裝置，解密後個資仍需經遮蔽步驟才送 AI。</span></div>
-      <div class="upload-zone" id="pdfZone" ondragover="dzDrag(event,true)" ondragleave="dzDrag(event,false)" ondrop="dzDrop(event,'pdf')">
-        <input type="file" accept=".pdf" onchange="handlePDF(event)">
+      <div class="upload-zone" id="pdfZone"
+        ondragover="dzDrag(event,true)"
+        ondragleave="dzDrag(event,false)"
+        ondrop="dzDrop(event,'pdf')"
+        onclick="document.getElementById('pdfFileInput').click()">
         <div class="uz-ic">📋</div>
-        <h3>拖曳壽險公會 PDF，或點擊選擇</h3>
-        <p>支援有密碼保護的 PDF</p>
+        <h3>點擊這裡選擇壽險公會 PDF</h3>
+        <p>或將 PDF 檔案拖曳到此區域</p>
       </div>
+      <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePDF(event)">
       <div class="pw-row">
         <div class="ff"><label>PDF 解密密碼（通常為身份證字號）</label><input type="text" id="pdfPwd" placeholder="例：A123456789" style="text-transform:uppercase" autocomplete="off"></div>
         <button class="btn btn-s" onclick="decryptPDF()">🔓 解密並萃取</button>
@@ -1012,12 +1017,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 
     <!-- Tab 1: 一般上傳 -->
     <div class="ptab-body" id="ptab1" style="display:none">
-      <div class="upload-zone" id="fileZone" ondragover="dzDrag(event,true)" ondragleave="dzDrag(event,false)" ondrop="dzDrop(event,'file')">
-        <input type="file" accept=".txt,.pdf" onchange="handleFile(event)">
+      <div class="upload-zone" id="fileZone"
+        ondragover="dzDrag(event,true)"
+        ondragleave="dzDrag(event,false)"
+        ondrop="dzDrop(event,'file')"
+        onclick="document.getElementById('genFileInput').click()">
         <div class="uz-ic">📂</div>
-        <h3>拖曳 .txt 或 .pdf 檔案，或點擊選擇</h3>
-        <p>無密碼 PDF 或純文字檔</p>
+        <h3>點擊這裡選擇 .txt 或 .pdf 檔案</h3>
+        <p>或將檔案拖曳到此區域</p>
       </div>
+      <input type="file" id="genFileInput" accept=".txt,.pdf" style="display:none" onchange="handleFile(event)">
     </div>
 
     <!-- Tab 2: 貼上 -->
@@ -1506,10 +1515,14 @@ let pendingPDFFile=null;
 function handlePDF(e){
   const f=e.target.files[0];if(!f)return;
   pendingPDFFile=f;
-  document.getElementById('pdfStatus').textContent=`已選擇：${f.name}，請輸入密碼後點解密。`;
+  document.getElementById('pdfStatus').textContent='已選擇：'+f.name+'，請輸入密碼後點解密。';
 }
 async function decryptPDF(){
-  if(!pendingPDFFile){alert('請先選擇 PDF 檔案');return;}
+  if(!pendingPDFFile){
+    // Try triggering file picker if no file yet
+    document.getElementById('pdfFileInput').click();
+    return;
+  }
   const pwd=document.getElementById('pdfPwd').value.trim();
   const st=document.getElementById('pdfStatus');
   st.textContent='解密中…';
@@ -1532,12 +1545,17 @@ async function decryptPDF(){
 }
 function handleFile(e){
   const f=e.target.files[0];if(!f)return;
-  if(f.name.endsWith('.pdf')){
+  if(f.name.toLowerCase().endsWith('.pdf')){
     pendingPDFFile=f;
     const pwd=prompt('請輸入 PDF 密碼（無密碼請留空）','');
     decryptPDFDirect(f,pwd||'');
-  }else{
-    const r=new FileReader();r.onload=ev=>{document.getElementById('policyText').value=ev.target.result;switchPTab(2);};r.readAsText(f);
+  } else {
+    const r=new FileReader();
+    r.onload=function(ev){
+      document.getElementById('policyText').value=ev.target.result;
+      switchPTab(2);
+    };
+    r.readAsText(f);
   }
 }
 async function decryptPDFDirect(f,pwd){
@@ -1557,12 +1575,23 @@ async function decryptPDFDirect(f,pwd){
 }
 
 // ── Drag/drop ─────────────────────────────────────────────────────────────────
-function dzDrag(e,on){e.preventDefault();e.currentTarget.classList.toggle('drag',on);}
+function dzDrag(e,on){
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.toggle('drag',on);
+}
 function dzDrop(e,t){
-  e.preventDefault();e.currentTarget.classList.remove('drag');
-  const f=e.dataTransfer.files[0];if(!f)return;
-  if(t==='pdf'){pendingPDFFile=f;document.getElementById('pdfStatus').textContent=`已選擇：${f.name}`;}
-  else{handleFile({target:{files:[f]}});}
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(!f)return;
+  if(t==='pdf'){
+    pendingPDFFile=f;
+    document.getElementById('pdfStatus').textContent='已選擇：'+f.name+'，請輸入密碼後點解密。';
+  } else {
+    handleFile({target:{files:[f]}});
+  }
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
