@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>保單智能分析系統 v12</title>
+<style>
+/* Google Fonts removed for local file compatibility */
+:root{
+  --ink:#1a1a2e;--paper:#f5f0e8;--accent:#c8a96e;--accent2:#4a7c6f;
+  --danger:#c0392b;--border:#d4c9b0;--muted:#7a7060;
+  --card:#fefcf7;--shadow:0 4px 20px rgba(26,26,46,.09);
+  --deep:#2c3e7a;--safe:#27ae60;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+select,input,button,textarea{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+select{cursor:pointer;}
+body{font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;font-size:17px;line-height:1.75;}
+header{background:var(--ink);padding:20px 36px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200;box-shadow:0 2px 14px rgba(26,26,46,.3);}
+header h1{font-family:Georgia,'Times New Roman',serif;font-size:1.6rem;color:var(--accent);}
+header p{font-size:.88rem;color:#a09880;margin-top:1px;}
+.hbadge{margin-left:auto;background:var(--accent2);color:#fff;font-size:.78rem;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+main{max-width:1120px;margin:0 auto;padding:24px 18px 80px;}
+
+/* ── Steps ── */
+.steps{display:flex;margin-bottom:24px;}
+.step{flex:1;display:flex;align-items:center;gap:7px;padding:12px 14px;background:var(--card);border:1px solid var(--border);font-size:.88rem;color:var(--muted);transition:all .3s;position:relative;}
+.step:not(:last-child)::after{content:'›';position:absolute;right:-7px;font-size:1.2rem;color:var(--border);z-index:2;}
+.step:first-child{border-radius:8px 0 0 8px;}.step:last-child{border-radius:0 8px 8px 0;}
+.step.active{background:var(--ink);color:var(--accent);border-color:var(--ink);}
+.step.done{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;flex-shrink:0;}
+.step.active .snum{background:var(--accent);color:var(--ink);}
+.step.done .snum{background:#fff;color:var(--accent2);}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);}
+.ctitle{font-size:.8rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.collapsible .chead{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding-bottom:0;}
+.collapsible .chead .ctitle{margin-bottom:0;}
+.collapsible .cbody{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);overflow:visible;}
+.collapsible .cbody.open{display:block;}
+.chevron{font-size:.85rem;color:var(--muted);transition:transform .25s;}
+.chevron.open{transform:rotate(180deg);}
+.opt-badge{font-size:.76rem;padding:2px 7px;border-radius:10px;background:rgba(122,112,96,.1);color:var(--muted);border:1px solid var(--border);margin-left:6px;}
+
+/* ── Security panel ── */
+.sec-panel{background:var(--card);border:1px solid var(--border);border-radius:11px;margin-bottom:16px;box-shadow:var(--shadow);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;cursor:pointer;user-select:none;}
+.sec-head:hover{background:rgba(26,26,46,.02);}
+.sec-hl{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.sec-hl h3{font-size:1rem;font-weight:700;}
+.sbadge{font-size:.76rem;padding:2px 8px;border-radius:12px;font-weight:600;}
+.sbadge.g{background:rgba(39,174,96,.11);color:#1a7a44;border:1px solid rgba(39,174,96,.2);}
+.sbadge.b{background:rgba(44,62,122,.1);color:var(--deep);border:1px solid rgba(44,62,122,.18);}
+.sbadge.o{background:rgba(200,169,110,.14);color:#7a5c20;border:1px solid rgba(200,169,110,.28);}
+.sec-body{display:none;padding:0 20px 16px;border-top:1px solid var(--border);}
+.sec-body.open{display:block;}
+.sec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px;}
+.si{display:flex;gap:9px;align-items:flex-start;}
+.si-ic{font-size:1.1rem;flex-shrink:0;margin-top:1px;}
+.si-t{font-size:.92rem;font-weight:700;margin-bottom:2px;}
+.si-d{font-size:.86rem;color:var(--muted);line-height:1.6;}
+.sec-flow{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:12px;padding:10px 13px;background:#f9f6f0;border-radius:8px;}
+.sfs{font-size:.82rem;background:#fff;border:1px solid var(--border);border-radius:5px;padding:4px 9px;white-space:nowrap;}
+.sfa{color:var(--accent);font-weight:700;font-size:.95rem;}
+.sec-risks{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.srisk{font-size:.82rem;padding:3px 9px;border-radius:5px;}
+.srisk.lo{background:rgba(39,174,96,.1);color:#1a7a44;}
+.srisk.md{background:rgba(200,169,110,.12);color:#7a5c20;}
+.srisk.hi{background:rgba(192,57,43,.1);color:#7a2020;}
+
+/* ── API Key ── */
+.key-card{background:var(--ink);border-radius:11px;padding:18px 22px;margin-bottom:16px;box-shadow:var(--shadow);}
+.key-card .ctitle{color:var(--accent);}
+.key-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.key-field{flex:1;min-width:220px;}
+.key-field label{display:block;font-size:.86rem;font-weight:600;color:#a09880;margin-bottom:5px;}
+.key-wrap{position:relative;display:flex;align-items:center;}
+.key-wrap input{width:100%;padding:11px 40px 11px 14px;border:1.5px solid #3a3a5a;border-radius:7px;font-family:monospace;font-size:.9rem;background:#0f0f1e;color:#e8e0d0;outline:none;transition:border-color .2s;}
+.key-wrap input:focus{border-color:var(--accent);}
+.key-wrap input::placeholder{color:#6a6a8a;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;font-size:.88rem;}
+.eye{position:absolute;right:10px;cursor:pointer;font-size:.9rem;color:#6a6a8a;}
+.eye:hover{color:var(--accent);}
+.kstat{display:flex;align-items:center;gap:5px;font-size:.86rem;margin-top:6px;min-height:16px;}
+.kstat .kd{width:6px;height:6px;border-radius:50%;background:#3a3a5a;flex-shrink:0;transition:background .3s;}
+.kstat.ok .kd{background:var(--safe);}.kstat.ok{color:#6ec98a;}
+.kstat.err .kd{background:var(--danger);}.kstat.err{color:#e08080;}
+.kstat.sv .kd{background:var(--accent);}.kstat.sv{color:var(--accent);}
+.key-note{font-size:.84rem;color:#c8c0a8;line-height:1.75;margin-top:10px;}
+.key-note a{color:#f0c870;text-decoration:underline;font-weight:600;}
+.key-note a:hover{text-decoration:underline;}
+.savebtn{display:inline-flex;align-items:center;gap:4px;padding:9px 15px;background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.28);border-radius:6px;font-size:.86rem;color:var(--accent);cursor:pointer;transition:all .2s;white-space:nowrap;align-self:flex-end;}
+.savebtn:hover{background:rgba(200,169,110,.22);}
+
+/* ── Model grid ── */
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+@media(max-width:600px){.mgrid{grid-template-columns:1fr;}}
+.mc{border:2px solid var(--border);border-radius:9px;padding:12px 14px;cursor:pointer;transition:all .2s;position:relative;}
+.mc:hover{border-color:var(--accent);}
+.mc.sel{border-color:var(--ink);background:rgba(26,26,46,.04);}
+.mn{font-size:1rem;font-weight:700;margin-bottom:2px;}
+.mid{font-size:.78rem;color:var(--muted);font-family:monospace;margin-bottom:6px;}
+.md{font-size:.88rem;line-height:1.45;color:#5a5448;}
+.mtags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.mtag{font-size:.75rem;padding:2px 6px;border-radius:9px;background:var(--border);color:var(--muted);}
+.mc.sel .mtag{background:var(--ink);color:var(--accent);}
+.selbadge{position:absolute;top:8px;right:8px;background:var(--ink);color:var(--accent);font-size:.74rem;padding:2px 6px;border-radius:9px;font-weight:700;}
+
+/* ── Profile / Calc fields ── */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;}
+.ff label{display:block;font-size:.86rem;font-weight:600;color:var(--muted);margin-bottom:4px;letter-spacing:.03em;}
+.ff input,.ff select{width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:7px;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;font-size:.95rem;background:#fafaf6;color:var(--ink);outline:none;transition:border-color .2s;}
+.ff input:focus,.ff select:focus{border-color:var(--accent);}
+
+/* ── PDF Upload ── */
+.pdf-tabs{display:flex;gap:3px;margin-bottom:12px;}
+.ptab{padding:9px 18px;border-radius:6px 6px 0 0;font-size:.9rem;cursor:pointer;border:1px solid var(--border);background:transparent;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;color:var(--muted);transition:all .2s;}
+.ptab.active{background:var(--card);border-bottom-color:var(--card);color:var(--ink);font-weight:500;}
+.upload-zone{border:2px dashed var(--border);border-radius:9px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .3s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(200,169,110,.05);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.uz-ic{font-size:1.7rem;margin-bottom:6px;}
+.upload-zone h3{font-size:1.05rem;margin-bottom:3px;}
+.upload-zone p{font-size:.88rem;color:var(--muted);}
+.pw-row{display:flex;gap:8px;align-items:flex-end;margin-top:10px;}
+.pw-row .ff{flex:1;}
+textarea{width:100%;min-height:150px;border:1px solid var(--border);border-radius:7px;padding:14px;font-family:'Noto Sans TC','Microsoft JhengHei',monospace;font-size:.95rem;background:#fafaf6;color:var(--ink);resize:vertical;outline:none;transition:border-color .2s;line-height:1.7;}
+textarea:focus{border-color:var(--accent);}
+
+/* ── Policy list (multi) ── */
+.policy-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.policy-item{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f9f6f0;border:1px solid var(--border);border-radius:8px;font-size:.92rem;}
+.pi-name{flex:1;font-weight:500;}
+.pi-rm{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:2px 6px;border-radius:4px;transition:all .2s;}
+.pi-rm:hover{background:rgba(192,57,43,.1);color:var(--danger);}
+
+/* ── PII ── */
+.piigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:7px;}
+.pii{display:flex;align-items:center;gap:7px;padding:10px 13px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all .2s;font-size:.92rem;}
+.pii:hover{border-color:var(--accent);}
+.pii.on{border-color:var(--danger);background:rgba(192,57,43,.05);}
+.dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all .2s;}
+.pii.on .dot{background:var(--danger);border-color:var(--danger);}
+.prev-box{background:#fafaf6;border:1px solid var(--border);border-radius:7px;padding:14px;font-size:.9rem;line-height:1.8;white-space:pre-wrap;word-break:break-all;min-height:70px;max-height:220px;overflow-y:auto;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border:none;border-radius:8px;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;font-size:.95rem;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-p{background:var(--ink);color:var(--accent);}
+.btn-p:hover{background:#2a2a48;transform:translateY(-1px);}
+.btn-s{background:transparent;color:var(--ink);border:1.5px solid var(--border);}
+.btn-s:hover{border-color:var(--ink);}
+.btn-a{background:var(--accent2);color:#fff;}
+.btn-a:hover{background:#3a6258;}
+.btn-d{background:var(--deep);color:#fff;padding:13px 28px;font-size:1rem;}
+.btn-d:hover{background:#1e2d5c;transform:translateY(-1px);}
+.btn-cp{background:rgba(44,62,122,.08);color:var(--deep);border:1.5px solid rgba(44,62,122,.18);}
+.btn-cp:hover{background:rgba(44,62,122,.14);}
+.btn-cp.copied{background:rgba(39,174,96,.1);color:#1a7a44;border-color:rgba(39,174,96,.25);}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important;}
+.brow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+/* ── Analysis ── */
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+@media(max-width:640px){.agrid{grid-template-columns:1fr;}}
+.sring{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;}
+.rw{position:relative;width:92px;height:92px;margin-bottom:6px;}
+.rw svg{transform:rotate(-90deg);}
+.rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;}
+.rv small{font-size:.58rem;color:var(--muted);font-weight:400;}
+.asec{margin-bottom:15px;}
+.asec h3{font-size:.84rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{padding:6px 12px;border-radius:18px;font-size:.86rem;font-weight:500;}
+.tag.pro{background:rgba(39,174,96,.11);color:#1a7a44;}
+.tag.con{background:rgba(192,57,43,.11);color:#952020;}
+.recs{list-style:none;}
+.recs li{padding:9px 14px;border-left:3px solid var(--accent);background:rgba(200,169,110,.07);margin-bottom:6px;border-radius:0 5px 5px 0;font-size:.92rem;line-height:1.6;}
+
+/* ── Dashboard ── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
+.dbox{background:#f9f6f0;border:1px solid var(--border);border-radius:9px;padding:14px 16px;text-align:center;}
+.dbox .dval{font-size:1.55rem;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.dbox .dlbl{font-size:.84rem;color:var(--muted);}
+.dbox.warn .dval{color:var(--danger);}
+.dbox.ok .dval{color:var(--safe);}
+.chart-wrap{display:flex;justify-content:center;margin:12px 0;}
+canvas{max-width:100%;}
+
+/* ── Timeline ── */
+.timeline{position:relative;padding-left:22px;margin-top:10px;}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:14px;}
+.tl-dot{position:absolute;left:-18px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--paper);}
+.tl-dot.done{background:var(--safe);}
+.tl-dot.soon{background:var(--danger);}
+.tl-title{font-size:.95rem;font-weight:600;margin-bottom:2px;}
+.tl-sub{font-size:.86rem;color:var(--muted);}
+
+/* ── Claim sim ── */
+.claim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px;}
+.claim-result{background:#f9f6f0;border:1px solid var(--border);border-radius:9px;padding:12px 14px;text-align:center;}
+.cr-val{font-size:1.25rem;font-weight:700;color:var(--safe);margin-bottom:2px;}
+.cr-val.red{color:var(--danger);}
+.cr-lbl{font-size:.82rem;color:var(--muted);}
+.claim-note{font-size:.88rem;color:var(--muted);line-height:1.65;padding:10px 13px;background:rgba(200,169,110,.07);border-radius:7px;margin-top:8px;}
+
+/* ── Deep block ── */
+.deep-block{background:linear-gradient(135deg,rgba(44,62,122,.06),rgba(44,62,122,.02));border:2px solid rgba(44,62,122,.18);border-radius:11px;padding:20px 24px;margin-bottom:16px;}
+.deep-block h2{font-size:1.1rem;font-weight:700;color:var(--deep);margin-bottom:4px;}
+.deep-desc{font-size:.92rem;color:#4a4a6a;line-height:1.6;margin-bottom:12px;}
+.dpbox{background:#fff;border:1px solid rgba(44,62,122,.18);border-radius:7px;padding:16px;font-size:.9rem;line-height:1.85;color:#2a2a3e;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;}
+.deep-how{background:rgba(44,62,122,.05);border-radius:7px;padding:11px 14px;margin-top:12px;}
+.deep-how h4{font-size:.84rem;font-weight:700;color:var(--deep);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;}
+.deep-how ol{padding-left:16px;font-size:.9rem;color:#3a3a5a;line-height:1.8;}
+.deep-how a{color:var(--deep);font-weight:600;text-decoration:none;}
+
+/* ── Misc ── */
+.loading{display:flex;align-items:center;gap:10px;padding:22px;color:var(--muted);font-size:.95rem;}
+.spin{width:18px;height:18px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.pnote{background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.22);border-radius:7px;padding:12px 16px;font-size:.88rem;line-height:1.6;color:var(--accent2);margin-bottom:14px;display:flex;gap:7px;}
+.warnbox{background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.18);border-radius:7px;padding:12px 16px;font-size:.88rem;color:#7a2020;margin-bottom:14px;display:flex;gap:7px;}
+.sdiv{text-align:center;position:relative;margin:20px 0 16px;color:var(--muted);font-size:.82rem;letter-spacing:.1em;}
+.sdiv::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--border);}
+.sdiv span{background:var(--paper);padding:0 10px;position:relative;}
+.tabs{display:flex;gap:3px;margin-bottom:11px;}
+.tab{padding:8px 16px;border-radius:5px 5px 0 0;font-size:.88rem;cursor:pointer;border:1px solid var(--border);background:transparent;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;color:var(--muted);}
+.tab.active{background:var(--card);border-bottom-color:var(--card);color:var(--ink);font-weight:500;}
+#rawOut{background:#fafaf6;border:1px solid var(--border);border-radius:7px;padding:14px;font-size:.76rem;line-height:1.8;white-space:pre-wrap;display:none;max-height:400px;overflow-y:auto;}
+.mind{display:inline-flex;align-items:center;gap:5px;background:rgba(26,26,46,.05);border-radius:5px;padding:5px 10px;font-size:.82rem;color:var(--muted);}
+.mind strong{color:var(--ink);}
+hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
+
+
+
+
+  /* ── Tutorial panel ── */
+  .tut-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .tut-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;}
+  .tut-head:hover{background:#faf7f0;}
+  .tut-body{display:none;padding:0 20px 18px;border-top:1px solid var(--border);}
+  .tut-body.open{display:block;}
+  .tut-phase{margin-top:16px;}
+  .tut-phase-title{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+  .tut-steps{display:flex;flex-direction:column;gap:9px;}
+  .tut-step{display:flex;gap:11px;align-items:flex-start;}
+  .tut-num{width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .tut-num.once{background:var(--accent2);}
+  .tut-content{flex:1;}
+  .tut-title{font-size:.95rem;font-weight:600;color:var(--ink);margin-bottom:3px;}
+  .tut-desc{font-size:.86rem;color:var(--muted);line-height:1.75;}
+  .tut-desc a{color:var(--deep);font-weight:600;text-decoration:none;}
+  .tut-desc a:hover{text-decoration:underline;}
+  .tut-desc code{background:rgba(26,26,46,.07);padding:1px 6px;border-radius:4px;font-size:.82rem;color:var(--deep);}
+  .tut-tip{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:4px 10px;background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.25);border-radius:6px;font-size:.8rem;color:#7a5c20;font-weight:500;}
+  .tut-divider{border:none;border-top:1px dashed var(--border);margin:14px 0;}
+
+  /* ── Knowledge panels ── */
+  .kpanel{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .kpanel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;background:var(--card);}
+  .kpanel-head:hover{background:#faf7f0;}
+  .kpanel-hl{display:flex;align-items:center;gap:10px;}
+  .kpanel-hl h3{font-size:1rem;font-weight:700;color:var(--ink);}
+  .kpanel-body{display:none;padding:0 20px 18px;border-top:1px solid var(--border);}
+  .kpanel-body.open{display:block;}
+  .cancer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px;}
+  .cancer-card{border:1px solid var(--border);border-radius:9px;}
+  .cancer-head{display:flex;align-items:center;gap:9px;padding:10px 13px;background:#f9f6f0;cursor:pointer;}
+  .cancer-rank{width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--accent);font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cancer-rank.top3{background:var(--danger);}
+  .cancer-name{font-size:.92rem;font-weight:600;flex:1;}
+  .cancer-detail{display:none;padding:10px 13px;font-size:.85rem;line-height:1.75;color:#3a3830;border-top:1px solid var(--border);}
+  .cancer-detail.open{display:block;}
+  .ins-tag{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:6px;margin:2px 2px 2px 0;font-weight:500;}
+  .ins-tag.must{background:rgba(192,57,43,.1);color:#7a2020;border:1px solid rgba(192,57,43,.2);}
+  .ins-tag.rec{background:rgba(44,62,122,.1);color:#1e2d6e;border:1px solid rgba(44,62,122,.18);}
+  .ins-tag.opt{background:rgba(74,124,111,.1);color:#1a5c35;border:1px solid rgba(74,124,111,.2);}
+  .ltc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:12px;}
+  .ltc-card{border:1px solid var(--border);border-radius:9px;padding:14px 16px;}
+  .ltc-card.highlight{border-color:var(--accent);background:rgba(200,169,110,.04);}
+  .ltc-title{font-size:.95rem;font-weight:700;margin-bottom:5px;color:var(--ink);}
+  .ltc-sub{font-size:.8rem;color:var(--muted);margin-bottom:8px;}
+  .ltc-pros{font-size:.82rem;color:#1a5c35;line-height:1.7;margin-bottom:4px;}
+  .ltc-cons{font-size:.82rem;color:#7a2020;line-height:1.7;margin-bottom:4px;}
+  .ltc-threshold{font-size:.8rem;color:var(--deep);line-height:1.7;margin-top:6px;padding:7px 10px;background:rgba(44,62,122,.05);border-radius:6px;}
+  .cost-note{font-size:.82rem;color:var(--muted);margin-top:4px;}
+  .section-label2{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;}
+  .compare-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.83rem;}
+  .compare-table th{background:#f0ece2;padding:8px 10px;text-align:left;font-weight:600;font-size:.8rem;border-bottom:2px solid var(--border);}
+  .compare-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.65;}
+  .compare-table tr:last-child td{border-bottom:none;}
+  .gov-box{background:rgba(74,124,111,.06);border:1px solid rgba(74,124,111,.2);border-radius:8px;padding:12px 14px;margin-top:10px;font-size:.85rem;line-height:1.75;}
+
+  /* ── Detail cards for layered output ── */
+  .detail-card{background:#f9f6f0;border:1px solid var(--border);border-radius:9px;padding:14px 16px;margin-bottom:10px;}
+  .detail-card:last-child{margin-bottom:0;}
+  .dc-title{font-size:.9rem;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .dc-body{font-size:.9rem;color:#4a4840;line-height:1.8;}
+  .pro-ic{color:#1a5c35;}
+
+  /* ── Scenario selector ── */
+  .scene-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .scene-rec{display:flex;align-items:flex-start;gap:10px;padding:13px 16px;border-radius:9px;margin-bottom:16px;background:rgba(39,174,96,.07);border:1px solid rgba(39,174,96,.18);}
+  .scene-rec p{font-size:.92rem;color:#1a5c35;line-height:1.65;margin:0;}
+  .scene-cards{display:flex;flex-direction:column;gap:10px;}
+  .scene-card{border:2px solid var(--border);border-radius:10px;transition:border-color .2s;}
+  .scene-card.open{border-color:var(--accent);}
+  .scene-head{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;background:var(--card);}
+  .scene-head:hover{background:#faf7f0;}
+  .scene-ic{font-size:1.4rem;flex-shrink:0;}
+  .scene-htitle{font-size:.95rem;font-weight:600;color:var(--ink);flex:1;}
+  .scene-stag{font-size:.72rem;padding:3px 10px;border-radius:12px;font-weight:600;white-space:nowrap;}
+  .stag-best{background:rgba(39,174,96,.12);color:#1a5c35;border:1px solid rgba(39,174,96,.22);}
+  .stag-ok{background:rgba(44,62,122,.1);color:#1e2d6e;border:1px solid rgba(44,62,122,.2);}
+  .stag-adv{background:rgba(192,57,43,.1);color:#7a2020;border:1px solid rgba(192,57,43,.2);}
+  .scene-chev{font-size:.8rem;color:var(--muted);transition:transform .25s;margin-left:4px;}
+  .scene-chev.open{transform:rotate(180deg);}
+  .scene-body{display:none;padding:14px 18px 16px;border-top:1px solid var(--border);background:#fafaf6;}
+  .scene-body.open{display:block;}
+  .slabel{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:12px;}
+  .slabel:first-child{margin-top:0;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+  .schip{font-size:.82rem;padding:4px 11px;border-radius:8px;background:var(--border);color:var(--muted);}
+  .schip.pro{background:rgba(39,174,96,.11);color:#1a5c35;}
+  .schip.con{background:rgba(192,57,43,.1);color:#7a2020;}
+  .smodel-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px;}
+  .smb{font-size:.8rem;padding:4px 11px;border-radius:8px;border:1px solid var(--border);color:var(--muted);}
+  .smb.rec{border-color:var(--ink);color:var(--ink);font-weight:600;background:rgba(26,26,46,.04);}
+  .cost-pill{display:inline-flex;flex-direction:column;background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.28);border-radius:9px;padding:10px 14px;margin-top:8px;}
+  .cost-pill .cv{font-size:1.1rem;font-weight:700;color:var(--ink);}
+  .cost-pill .cl{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .scene-note{font-size:.84rem;color:var(--muted);line-height:1.65;margin-top:10px;padding:9px 13px;background:rgba(200,169,110,.06);border-radius:7px;}
+  .model-quick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;}
+  @media(max-width:480px){.model-quick{grid-template-columns:1fr;}}
+  .mq{border:1px solid var(--border);border-radius:9px;padding:12px 14px;}
+  .mq.rec{border:2px solid var(--ink);background:rgba(26,26,46,.03);}
+  .mq-name{font-size:.9rem;font-weight:600;margin-bottom:5px;}
+  .mq-info{font-size:.78rem;color:var(--muted);line-height:1.6;}
+  .scene-divider{border:none;border-top:1px solid var(--border);margin:14px 0 10px;}
+
+  /* ── Family members ── */
+  .family-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}
+  .family-bar-label{font-size:.68rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;}
+  .fmember{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:.92rem;transition:all .2s;background:#fff;white-space:nowrap;}
+  .fmember:hover{border-color:var(--accent);}
+  .fmember.active{border-color:var(--ink);background:var(--ink);color:var(--accent);font-weight:600;}
+  .fmember .fm-avatar{font-size:1rem;}
+  .fmember .fm-del{margin-left:4px;color:var(--muted);font-size:.75rem;cursor:pointer;padding:0 2px;}
+  .fmember.active .fm-del{color:rgba(200,169,110,.6);}
+  .fmember .fm-del:hover{color:var(--danger);}
+  .fm-add-btn{display:flex;align-items:center;gap:5px;padding:9px 15px;border:1.5px dashed var(--border);border-radius:20px;cursor:pointer;font-size:.9rem;color:var(--muted);transition:all .2s;background:transparent;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC','Heiti TC',sans-serif;}
+  .fm-add-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .fm-modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,.45);z-index:9999;align-items:center;justify-content:center;}
+  .fm-modal-overlay.open{display:flex;}
+  .fm-modal{background:var(--card);border-radius:14px;padding:26px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(26,26,46,.25);}
+  .fm-modal h3{font-size:1.15rem;font-weight:700;margin-bottom:16px;}
+  .fm-avatar-pick{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .av-opt{font-size:1.6rem;cursor:pointer;padding:6px;border-radius:8px;border:2px solid transparent;transition:all .2s;}
+  .av-opt:hover,.av-opt.sel{border-color:var(--accent);background:rgba(200,169,110,.1);}
+  .fm-modal .ff{margin-bottom:12px;}
+  .fm-modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+  /* ── Family results storage ── */
+  .family-results{margin-bottom:6px;}
+  .fr-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;}
+  .fr-card:hover{border-color:var(--accent);}
+  .fr-card.current{border-color:var(--ink);background:rgba(26,26,46,.03);}
+  .fr-avatar{font-size:1.5rem;}
+  .fr-info{flex:1;}
+  .fr-name{font-size:1rem;font-weight:700;}
+  .fr-meta{font-size:.86rem;color:var(--muted);margin-top:2px;}
+  .fr-score{font-size:1.1rem;font-weight:700;min-width:38px;text-align:right;}
+
+  /* ── Export modal ── */
+  .exp-modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,.45);z-index:9999;align-items:center;justify-content:center;}
+  .exp-modal-overlay.open{display:flex;}
+  .exp-modal{background:var(--card);border-radius:14px;padding:26px 28px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(26,26,46,.25);}
+  .exp-modal h3{font-size:1.15rem;font-weight:700;margin-bottom:6px;}
+  .exp-modal p{font-size:.92rem;color:var(--muted);margin-bottom:16px;line-height:1.6;}
+  .exp-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .exp-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;}
+  .exp-opt:hover{border-color:var(--accent);}
+  .exp-opt.sel{border-color:var(--ink);background:rgba(26,26,46,.03);}
+  .exp-opt-ic{font-size:1.3rem;}
+  .exp-opt-info{flex:1;}
+  .exp-opt-title{font-size:.96rem;font-weight:600;}
+  .exp-opt-desc{font-size:.85rem;color:var(--muted);}
+  .exp-modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+
+
+  /* guide CSS moved to scenario A */
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Deep Research 補強</p></div>
+  <span class="hbadge">v12 隱私優先</span>
+</header>
+<main>
+
+<!-- ══ 家庭成員切換列 ══ -->
+<div class="family-bar">
+  <span class="family-bar-label">👨‍👩‍👧 家庭成員</span>
+  <div id="memberTabs"></div>
+  <button class="fm-add-btn" onclick="openAddMember()">＋ 新增成員</button>
+</div>
+
+<!-- ══ 新增成員 Modal ══ -->
+<div class="fm-modal-overlay" id="fmOverlay" onclick="closeFMModal(event)">
+  <div class="fm-modal">
+    <h3>新增家庭成員</h3>
+    <div class="ff"><label>姓名或暱稱</label><input type="text" id="fmName" placeholder="例：爸爸、王大明、配偶"></div>
+    <div class="ff" style="margin-bottom:8px"><label>選擇頭像</label></div>
+    <div class="fm-avatar-pick" id="fmAvatarPick"></div>
+    <div class="fm-modal-btns">
+      <button class="btn btn-s" onclick="closeFMModalDirect()">取消</button>
+      <button class="btn btn-p" onclick="confirmAddMember()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 匯出 Modal ══ -->
+<div class="exp-modal-overlay" id="expOverlay" onclick="closeExpModal(event)">
+  <div class="exp-modal">
+    <h3>📤 匯出分析報告</h3>
+    <p>選擇匯出格式，報告包含保障評分、優缺點、缺口分析、補強建議及 Deep Research Prompt。</p>
+    <div class="exp-options">
+      <div class="exp-opt sel" id="expOptPrint" onclick="selExp('print')">
+        <span class="exp-opt-ic">🖨️</span>
+        <div class="exp-opt-info">
+          <div class="exp-opt-title">列印 / 儲存為 PDF</div>
+          <div class="exp-opt-desc">使用瀏覽器列印功能，選「另存為 PDF」，最相容所有裝置</div>
+        </div>
+      </div>
+      <div class="exp-opt" id="expOptCopy" onclick="selExp('copy')">
+        <span class="exp-opt-ic">📋</span>
+        <div class="exp-opt-info">
+          <div class="exp-opt-title">複製純文字報告</div>
+          <div class="exp-opt-desc">複製完整文字內容，可貼至 Word、Notes 或 Line 傳送給業務員</div>
+        </div>
+      </div>
+      <div class="exp-opt" id="expOptHtml" onclick="selExp('html')">
+        <span class="exp-opt-ic">💾</span>
+        <div class="exp-opt-info">
+          <div class="exp-opt-title">下載 HTML 報告</div>
+          <div class="exp-opt-desc">下載獨立 HTML 檔案，瀏覽器開啟即可查看，永久保存</div>
+        </div>
+      </div>
+    </div>
+    <div class="exp-modal-btns">
+      <button class="btn btn-s" onclick="closeExpModalDirect()">取消</button>
+      <button class="btn btn-p" onclick="doExport()">📤 匯出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 資安說明 ══ -->
+<div class="sec-panel">
+  <div class="sec-head" onclick="toggleSec()">
+    <div class="sec-hl">
+      <span style="font-size:1.05rem">🔐</span>
+      <h3>資料安全與個資保護說明</h3>
+      <span class="sbadge g">✓ 全程本機</span>
+      <span class="sbadge b">✓ 個資不上傳</span>
+      <span class="sbadge o">✓ 送出前自動遮蔽</span>
+    </div>
+    <span class="chevron" id="secChev">▼</span>
+  </div>
+  <div class="sec-body" id="secBody">
+    <div class="sec-grid">
+      <div class="si"><span class="si-ic">🖥️</span><div><div class="si-t">全程瀏覽器本機處理</div><div class="si-d">保單文字、PDF 解密、個資遮蔽全在您的裝置完成，不經任何伺服器，關閉視窗資料即消失。</div></div></div>
+      <div class="si"><span class="si-ic">🔑</span><div><div class="si-t">PDF 密碼不離開裝置</div><div class="si-d">輸入身份證字號後在瀏覽器記憶體解密，原理與 Adobe Reader 相同，解密後即丟棄，不傳出任何網路。</div></div></div>
+      <div class="si"><span class="si-ic">█</span><div><div class="si-t">個資送出前自動遮蔽</div><div class="si-d">姓名、身份證、電話、地址、病史等敏感欄位，全部替換為「███」後才送給 AI，AI 無法還原個人身份。</div></div></div>
+      <div class="si"><span class="si-ic">🤖</span><div><div class="si-t">AI 只收到保障結構</div><div class="si-d">送出給 API 的是險種、保額、缺口等保障資訊，即使 API 有紀錄也無法對應到任何真實個人。</div></div></div>
+      <div class="si"><span class="si-ic">💾</span><div><div class="si-t">API Key 僅存本機</div><div class="si-d">儲存時寫入瀏覽器 localStorage，只有您自己的裝置可讀取，不同裝置或使用者無法存取。</div></div></div>
+      <div class="si"><span class="si-ic">📄</span><div><div class="si-t">原始碼完全公開可驗證</div><div class="si-d">單一 HTML 檔案，瀏覽器「檢視原始碼」即可確認所有行為，沒有任何隱藏邏輯或外部追蹤。</div></div></div>
+    </div>
+    <div class="sec-flow">
+      <span class="sfs">📄 保單文字／PDF</span><span class="sfa">→</span>
+      <span class="sfs">🖥️ 本機解析</span><span class="sfa">→</span>
+      <span class="sfs">█ 個資遮蔽</span><span class="sfa">→</span>
+      <span class="sfs">🤖 只傳匿名內容</span><span class="sfa">→</span>
+      <span class="sfs">📊 結果顯示</span>
+      <div style="width:100%;font-size:.68rem;color:var(--muted);margin-top:5px">⚠️ 原始個資全程留在您的裝置，不進入任何網路傳輸步驟</div>
+    </div>
+    <div class="sec-risks">
+      <span class="srisk lo">✓ 從可信任來源取得此 HTML 檔</span>
+      <span class="srisk lo">✓ 使用自己的裝置操作</span>
+      <span class="srisk md">⚠ 避免在公用電腦使用</span>
+      <span class="srisk md">⚠ 確認瀏覽器無可疑擴充套件</span>
+      <span class="srisk hi">✗ 請勿從陌生連結開啟此工具</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 使用教學 ══ -->
+<div class="tut-panel">
+  <div class="tut-head" onclick="togTut()">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.1rem">📖</span>
+      <span style="font-size:1rem;font-weight:700;color:var(--ink)">使用教學 — 從零開始到完整分析</span>
+      <span class="sbadge b" style="font-size:.72rem">初次使用必看</span>
+    </div>
+    <span class="chevron" id="tutChev">▼</span>
+  </div>
+  <div class="tut-body" id="tutBody">
+
+    <!-- 準備階段 -->
+    <div class="tut-phase">
+      <div class="tut-phase-title">🔧 準備階段（只需做一次）</div>
+      <div class="tut-steps">
+
+        <div class="tut-step">
+          <div class="tut-num once">①</div>
+          <div class="tut-content">
+            <div class="tut-title">申請 Anthropic 帳號並取得 API Key</div>
+            <div class="tut-desc">
+              這個工具需要搭配 <strong>Anthropic API Key</strong> 才能呼叫 Claude AI 分析保單。API Key 是一組專屬識別碼，讓工具知道要向誰的帳戶收費。<br><br>
+              ① 前往 <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> 免費申請帳號（Google 帳號即可）<br>
+              ② 點左側「Billing」→「Add credits」儲值（見下方建議金額）<br>
+              ③ 點左側「API Keys」→「Create Key」→ 複製 <code>sk-ant-api03-...</code> 金鑰
+            </div>
+            <div class="tut-tip">💰 只分析一次：儲值 <strong>5 美元（約台幣 160 元）</strong>就夠用了，費用非常低</div>
+            <div class="tut-tip" style="margin-left:0;margin-top:4px">👨‍👩‍👧 全家多次使用：儲值 <strong>10 美元（約台幣 320 元）</strong>更安心</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num once">②</div>
+          <div class="tut-content">
+            <div class="tut-title">申請壽險公會保單查詢 PDF（強烈推薦）</div>
+            <div class="tut-desc">
+              前往 <a href="https://www.lia-roc.org.tw" target="_blank">www.lia-roc.org.tw</a> →「消費者服務」→「保單紀錄查詢」，用手機 OTP 驗證，勾選所有保險類型後下載 PDF。<br>
+              <strong>PDF 密碼通常是身份證字號大寫</strong>，例如 A123456789。整個過程約 10 分鐘。
+            </div>
+            <div class="tut-tip">🏛️ 這份 PDF 包含您在所有保險公司的全部有效保單，是最完整的資料來源</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tut-divider"></div>
+
+    <!-- 分析階段 -->
+    <div class="tut-phase">
+      <div class="tut-phase-title">🚀 每次分析步驟</div>
+      <div class="tut-steps">
+
+        <div class="tut-step">
+          <div class="tut-num">1</div>
+          <div class="tut-content">
+            <div class="tut-title">評估您的資料情境</div>
+            <div class="tut-desc">頁面最上方的「情境選擇器」說明三種情況，確認自己是哪一種：<br>
+            ✅ <strong>情境 A</strong>（最推薦）：只用壽險公會 PDF，最省事<br>
+            ✅ <strong>情境 B</strong>：壽險公會 PDF + 部分電子保單<br>
+            ✅ <strong>情境 C</strong>：全部都有電子版保單條款</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">2</div>
+          <div class="tut-content">
+            <div class="tut-title">貼上 API Key 並選擇模型</div>
+            <div class="tut-desc">將複製好的 <code>sk-ant-api03-...</code> 金鑰貼入黑色欄位，點「💾 儲存本機」後下次自動帶入。<br>
+            模型選擇：一般情況選 <strong>⚡ Sonnet 4.6</strong>；多份保單或複雜分析選 <strong>🧠 Opus 4.6</strong>。</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">3</div>
+          <div class="tut-content">
+            <div class="tut-title">填入個人資訊（選填，但越完整越好）</div>
+            <div class="tut-desc">點「個人基本資訊」展開，填入年齡、家庭狀況、月收入、預算等，AI 的補強建議會更貼合您的實際需求。<br>
+            也可以展開「保障需求試算器」，系統會自動算出您建議的壽險、醫療、意外保額。</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">4</div>
+          <div class="tut-content">
+            <div class="tut-title">上傳保單資料</div>
+            <div class="tut-desc">
+              <strong>壽險公會 PDF：</strong>點「壽險公會 PDF」頁籤 → 上傳檔案 → 輸入密碼（身份證字號）→ 點「解密並萃取」<br>
+              <strong>文字貼上：</strong>點「貼上文字」頁籤，直接貼上保單文字內容<br>
+              <strong>多份保單：</strong>貼上第一份後點「➕ 再加一份保單」，可累積多份
+            </div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">5</div>
+          <div class="tut-content">
+            <div class="tut-title">設定個資遮蔽 → 送出分析</div>
+            <div class="tut-desc">系統自動勾選要遮蔽的個資項目（建議全選），右側預覽確認姓名、身份證等已變成「███」，確認後點「🤖 送出 AI 分析」，約 10~30 秒出結果。</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">6</div>
+          <div class="tut-content">
+            <div class="tut-title">看懂分析結果</div>
+            <div class="tut-desc">
+              <strong>快速看（30秒）：</strong>最上方的「重點摘要」卡片，看評分、三個重點、最緊急要處理的事<br>
+              <strong>深入看：</strong>切換下方頁籤 →「📊 完整分析」看優缺點與補強建議（每項都有行動步驟）→「📄 我的保單」看每張保單的一句話說明 →「🏥 理賠試算」假設住院/罹癌試算能賠多少
+            </div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">7</div>
+          <div class="tut-content">
+            <div class="tut-title">複製 Deep Research Prompt → 到 Claude.ai 查市場產品</div>
+            <div class="tut-desc">
+              頁面下方藍色區塊點「📋 複製 Deep Research Prompt」，然後：<br>
+              ① 開啟 <a href="https://claude.ai" target="_blank">claude.ai</a>（需有 Claude.ai 帳號，免費版即可）<br>
+              ② 在輸入框旁點「<strong>研究</strong>」開啟深度研究模式<br>
+              ③ 貼上 Prompt 送出，Claude 會自動搜尋市場產品、查條款、比較各家理賠難易度
+            </div>
+            <div class="tut-tip">🔍 深度研究模式會自動執行多輪網路搜尋，結果比一般對話更完整</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">8</div>
+          <div class="tut-content">
+            <div class="tut-title">匯出報告 / 新增家庭成員（選用）</div>
+            <div class="tut-desc">
+              點「📤 匯出報告」可存成 PDF 或複製文字，方便存檔或傳給業務員討論。<br>
+              頁面頂端點「＋ 新增成員」可分別分析配偶、父母、子女的保單，各自獨立，切換時自動儲存。
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tut-divider"></div>
+
+    <div style="padding:11px 14px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.18);border-radius:8px;font-size:.86rem;line-height:1.75;color:#1a5c35;margin-bottom:10px">
+      💡 <strong>最下方「保障知識專區」</strong>隨時可查閱，不需要先分析保單：包含 2024 台灣十大癌症對應保險規劃、長照完整規劃指南、各險種申請資格與門檻說明。
+    </div>
+    <div style="padding:11px 14px;background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.18);border-radius:8px;font-size:.86rem;line-height:1.75;color:#7a2020">
+      ⚠️ <strong>注意：</strong>將 HTML 下載到電腦後，<strong>不能直接用瀏覽器開啟檔案來使用 AI 分析功能</strong>（會出現 CORS 錯誤）。需要用本機伺服器開啟，最簡單的方法是在 HTML 所在資料夾開終端機輸入：<br>
+      <code style="display:inline-block;margin:6px 0;padding:5px 10px;background:var(--ink);color:var(--accent);border-radius:5px;font-size:.85rem">python -m http.server 8080</code><br>
+      然後瀏覽器開啟 <code style="background:rgba(26,26,46,.07);padding:1px 6px;border-radius:4px;color:var(--deep)">http://localhost:8080/insurance-analyzer.html</code>。或直接在 Claude.ai 對話中使用，不需要下載。
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ Steps ══ -->
+<div class="steps">
+  <div class="step active" id="s1"><div class="snum">1</div>設定 & 保單輸入</div>
+  <div class="step" id="s2"><div class="snum">2</div>個資遮蔽</div>
+  <div class="step" id="s3"><div class="snum">3</div>分析結果</div>
+</div>
+
+<!-- ════ STEP 1 ════ -->
+<div id="step1">
+
+  <!-- Scenario selector -->
+  <div class="scene-wrap">
+    <div class="ctitle">📊 評估您的資料情境與費用</div>
+    <div class="scene-rec">
+      <span style="font-size:1.3rem">⭐</span>
+      <p><strong>大多數人最推薦：</strong>使用壽險公會通報系統查詢結果 PDF，一份 PDF 涵蓋全部保單，來自官方資料庫，不漏任何有效保單或附約，申請約 10 分鐘。</p>
+    </div>
+    <div class="scene-cards">
+
+      <!-- 情境A -->
+      <div class="scene-card open" id="sc-a">
+        <div class="scene-head" onclick="togScene('a')">
+          <span class="scene-ic">🏛️</span>
+          <span class="scene-htitle">情境 A：只用壽險公會 PDF</span>
+          <span class="scene-stag stag-best">⭐ 最推薦</span>
+          <span class="scene-chev open" id="sc-a-chev">▼</span>
+        </div>
+        <div class="scene-body open" id="sc-a-body">
+
+          <!-- 什麼是壽險公會通報系統 -->
+          <div class="slabel">什麼是壽險公會通報系統？</div>
+          <div style="font-size:.9rem;color:var(--muted);line-height:1.75;margin-bottom:10px">
+            中華民國人壽保險商業同業公會建置的「保險業通報作業資訊系統」，整合所有壽險公司的投保資料，讓保戶可以一次查詢在各家公司的全部有效保單，不會漏掉任何附約或舊保單。
+          </div>
+
+          <div class="slabel">適合對象</div>
+          <div class="chip-row">
+            <span class="schip">沒有整理過保單</span>
+            <span class="schip">保單分散多家公司</span>
+            <span class="schip">不確定有哪些附約</span>
+            <span class="schip">70歲以上長輩保單管理</span>
+          </div>
+
+          <div class="slabel">申請方式（擇一）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div style="border:2px solid var(--accent);border-radius:9px;padding:11px 13px;background:rgba(200,169,110,.05)">
+              <div style="font-size:.88rem;font-weight:700;margin-bottom:4px;color:var(--ink)">💻 線上申請 ⭐推薦</div>
+              <div style="font-size:.82rem;color:var(--muted);line-height:1.65">透過官網，需手機 OTP 驗證，約 5~10 分鐘，PDF 當下下載。</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:9px;padding:11px 13px;">
+              <div style="font-size:.88rem;font-weight:700;margin-bottom:4px;color:var(--ink)">🏢 臨櫃申請</div>
+              <div style="font-size:.82rem;color:var(--muted);line-height:1.65">攜帶身份證至壽險公司或公會辦事處，約 3~5 個工作天。</div>
+            </div>
+          </div>
+
+          <div class="slabel">線上申請五步驟</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+              <div>
+                <div style="font-size:.9rem;font-weight:600;margin-bottom:2px">前往壽險公會官網</div>
+                <div style="font-size:.82rem;color:var(--muted);line-height:1.6">開啟 <a href="https://www.lia-roc.org.tw" target="_blank" style="color:var(--deep);font-weight:600">www.lia-roc.org.tw</a>，點選「消費者服務」→「保單紀錄查詢」，或直接搜尋「保險業通報作業資訊系統」。</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+              <div>
+                <div style="font-size:.9rem;font-weight:600;margin-bottom:2px">選擇身份驗證方式</div>
+                <div style="font-size:.82rem;color:var(--muted);line-height:1.6">推薦選「<strong>行動身份識別</strong>」（手機 OTP），不需讀卡機，一般民眾最方便。</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+              <div>
+                <div style="font-size:.9rem;font-weight:600;margin-bottom:2px">完成身份驗證登入</div>
+                <div style="font-size:.82rem;color:var(--muted);line-height:1.6">輸入身份證字號、出生年月日，完成手機簡訊 OTP 驗證。</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
+              <div>
+                <div style="font-size:.9rem;font-weight:600;margin-bottom:2px">選擇查詢項目</div>
+                <div style="font-size:.82rem;color:var(--muted);line-height:1.6">選「個人保險資料查詢」→ 勾選「人壽保險」「健康保險」「傷害保險」全部類型。</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--deep);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</div>
+              <div>
+                <div style="font-size:.9rem;font-weight:600;margin-bottom:2px">下載 PDF 報告</div>
+                <div style="font-size:.82rem;color:var(--muted);line-height:1.6">系統產生 PDF，<strong>密碼通常為身份證字號（英文大寫）</strong>，例如：A123456789。下載後回到此工具上傳即可。</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.15);border-radius:8px;padding:11px 14px;font-size:.84rem;color:#7a2020;line-height:1.7;margin-bottom:12px">
+            ⚠️ <strong>注意事項：</strong>查詢結果包含所有壽險有效保單；<strong>產險（汽車險、住宅火險等）不在此範圍</strong>，需另查財產保險發展中心。PDF 密碼若非身份證字號，可嘗試出生年月日（民國格式，例：850315）。
+          </div>
+
+          <div class="scene-divider"></div>
+
+          <div class="slabel">資料完整度</div>
+          <div class="chip-row">
+            <span class="schip pro">✓ 涵蓋所有有效保單</span>
+            <span class="schip pro">✓ 官方資料庫，不漏單</span>
+            <span class="schip con">✗ 無詳細條款內容</span>
+            <span class="schip con">✗ 無實際保費金額</span>
+          </div>
+
+          <div class="slabel">建議模型</div>
+          <div class="smodel-row">
+            <span class="smb rec">⚡ Sonnet 4.6（推薦）</span>
+            <span class="smb">🧠 Opus 4.6（更深入）</span>
+          </div>
+          <div class="cost-pill">
+            <span class="cv">每次約台幣 0.5 ~ 1 元</span>
+            <span class="cl">三頁 PDF 約 3,000~5,000 tokens，Sonnet 4.6 估算</span>
+          </div>
+          <div class="scene-note">AI 依商品名稱推測保障類型，再透過 Deep Research Prompt 逐一查詢各商品公開條款補足細節。</div>
+
+        </div>
+      </div>
+
+      <!-- 情境B -->
+      <div class="scene-card" id="sc-b">
+        <div class="scene-head" onclick="togScene('b')">
+          <span class="scene-ic">📑</span>
+          <span class="scene-htitle">情境 B：部分電子保單 ＋ 壽險公會 PDF</span>
+          <span class="scene-stag stag-ok">建議</span>
+          <span class="scene-chev" id="sc-b-chev">▼</span>
+        </div>
+        <div class="scene-body" id="sc-b-body">
+          <div class="slabel">適合對象</div>
+          <div class="chip-row">
+            <span class="schip">部分保單有電子版條款</span>
+            <span class="schip">想讓分析更精準</span>
+          </div>
+          <div class="slabel">資料完整度</div>
+          <div class="chip-row">
+            <span class="schip pro">✓ 保障清單完整（公會PDF）</span>
+            <span class="schip pro">✓ 有條款的保單分析更深入</span>
+            <span class="schip con">✗ 需多份文件整合</span>
+          </div>
+          <div class="slabel">做法</div>
+          <div style="font-size:.88rem;color:var(--muted);line-height:1.8">
+            ① 用「多份保單」功能先加入壽險公會 PDF 內容<br>
+            ② 再加入您有電子版的保單條款文字<br>
+            ③ 一次送出合併分析
+          </div>
+          <div class="slabel">建議模型</div>
+          <div class="smodel-row">
+            <span class="smb rec">🧠 Opus 4.6（推薦，處理多份合併）</span>
+            <span class="smb">⚡ Sonnet 4.6</span>
+          </div>
+          <div class="cost-pill">
+            <span class="cv">每次約台幣 1 ~ 5 元</span>
+            <span class="cl">5,000~15,000 tokens，視合併後總字數，Opus 4.6 估算</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 情境C -->
+      <div class="scene-card" id="sc-c">
+        <div class="scene-head" onclick="togScene('c')">
+          <span class="scene-ic">📄</span>
+          <span class="scene-htitle">情境 C：完整電子保單（全部）</span>
+          <span class="scene-stag stag-adv">進階</span>
+          <span class="scene-chev" id="sc-c-chev">▼</span>
+        </div>
+        <div class="scene-body" id="sc-c-body">
+          <div class="slabel">適合對象</div>
+          <div class="chip-row">
+            <span class="schip">所有保單都有電子版條款</span>
+            <span class="schip">想要最深度分析</span>
+          </div>
+          <div class="slabel">資料完整度</div>
+          <div class="chip-row">
+            <span class="schip pro">✓ 條款細節最完整</span>
+            <span class="schip pro">✓ 理賠條件可直接分析</span>
+            <span class="schip pro">✓ 除外責任可看到</span>
+            <span class="schip con">✗ 需自行整理多份文件</span>
+            <span class="schip con">✗ Token 用量較高</span>
+          </div>
+          <div class="slabel">建議模型</div>
+          <div class="smodel-row">
+            <span class="smb rec">🧠 Opus 4.6（推薦）</span>
+          </div>
+          <div class="cost-pill">
+            <span class="cv">每次約台幣 5 ~ 20 元</span>
+            <span class="cl">20,000~60,000 tokens，完整條款，Opus 4.6 估算</span>
+          </div>
+          <div class="scene-note">Token 用量大時建議分批送出，先各別分析再合併比對缺口。</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="scene-divider"></div>
+    <div class="slabel">模型快速選擇</div>
+    <div class="model-quick">
+      <div class="mq">
+        <div class="mq-name">🚀 Haiku 4.5</div>
+        <div class="mq-info">快速摘要<br>低於台幣 0.1 元／次<br>分析深度較淺</div>
+      </div>
+      <div class="mq rec">
+        <div class="mq-name">⚡ Sonnet 4.6 ★</div>
+        <div class="mq-info">大多數情境首選<br>約台幣 0.5~3 元／次<br>速度與精度平衡</div>
+      </div>
+      <div class="mq">
+        <div class="mq-name">🧠 Opus 4.6</div>
+        <div class="mq-info">多份合併、複雜分析<br>約台幣 3~20 元／次<br>最高推理精度</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key -->
+  <div class="key-card">
+    <div class="ctitle">🔑 Anthropic API Key <span style="font-size:.72rem;color:#a09880;text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px">（必填）</span></div>
+
+    <!-- What is API Key -->
+    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:13px 16px;margin-bottom:14px">
+      <div style="font-size:.84rem;font-weight:700;color:var(--accent);margin-bottom:7px">💡 什麼是 API Key？</div>
+      <div style="font-size:.9rem;color:#d4c9b0;line-height:1.8">API Key 是一組專屬的識別碼（像是一張門票），讓這個工具能夠呼叫 Claude AI 幫您分析保單。每次分析會從您的 Anthropic 帳戶扣除少量費用，<strong style="color:var(--accent)">分析一次保單約 <strong style="color:var(--accent)">台幣 0.5~1 元（不是美金）</strong>，非常便宜。</div>
+    </div>
+
+    <!-- Input -->
+    <div class="key-row">
+      <div class="key-field">
+        <label style="color:#c8c0a8">貼上您的 API Key</label>
+        <div class="key-wrap">
+          <input type="password" id="apiKey" placeholder="sk-ant-api03-…" oninput="onKeyInput()" autocomplete="off" spellcheck="false">
+          <span class="eye" onclick="toggleEye()">👁</span>
+        </div>
+        <div class="kstat" id="kstat"><div class="kd"></div><span id="kstatTx">尚未輸入</span></div>
+      </div>
+      <div class="savebtn" onclick="saveKey()">💾 儲存本機</div>
+    </div>
+
+    <!-- How to get -->
+    <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,.1);padding-top:14px">
+      <div style="font-size:.84rem;font-weight:700;color:var(--accent);margin-bottom:11px">🚀 還沒有帳號和 API Key？三步驟取得：</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+          <div>
+            <div style="font-size:.9rem;font-weight:600;color:#e8e0d0;margin-bottom:3px">免費申請 Anthropic 帳號</div>
+            <div style="font-size:.84rem;color:#c8c0a8;line-height:1.7">前往 <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>，點「Sign Up」，用 <strong style="color:#e8e0d0">Google 帳號</strong>或 Email 免費註冊，約 2 分鐘完成。</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+          <div>
+            <div style="font-size:.9rem;font-weight:600;color:#e8e0d0;margin-bottom:3px">儲值（用信用卡）</div>
+            <div style="font-size:.84rem;color:#c8c0a8;line-height:1.7">登入後點左側「<strong style="color:#e8e0d0">Billing</strong>」→「Add credits」。</div>
+            <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
+              <div style="padding:5px 12px;background:rgba(200,169,110,.14);border:1px solid rgba(200,169,110,.32);border-radius:7px;font-size:.84rem;color:var(--accent);font-weight:600">💰 只分析一次：儲值 <strong>5 美元（約台幣 160 元）</strong>，可分析約 300 次，用不完</div>
+              <div style="padding:5px 12px;background:rgba(74,124,111,.12);border:1px solid rgba(74,124,111,.28);border-radius:7px;font-size:.84rem;color:#a0d4c0;font-weight:600">👨‍👩‍👧 全家多次使用：儲值 <strong>10 美元（約台幣 320 元）</strong>更安心</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+          <div>
+            <div style="font-size:.9rem;font-weight:600;color:#e8e0d0;margin-bottom:3px">建立並複製 API Key</div>
+            <div style="font-size:.84rem;color:#c8c0a8;line-height:1.7">點左側「<strong style="color:#e8e0d0">API Keys</strong>」→「Create Key」→ 複製 <code style="background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px;color:var(--accent)">sk-ant-api03-...</code> 開頭的金鑰，貼到上方欄位並點「儲存本機」。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-note">🔒 Key 僅儲存於您的瀏覽器本機，不會傳送至任何伺服器。此費用與 Claude.ai 的訂閱費用<strong style="color:#e8e0d0">完全獨立</strong>，互不影響。</div>
+  </div>
+
+  <!-- Model -->
+  <div class="card">
+    <div class="ctitle">🤖 選擇分析模型</div>
+    <div class="mgrid" id="mgrid"></div>
+    <div style="margin-top:9px;font-size:.71rem;color:var(--muted);line-height:1.55">💡 一般保單選 <strong>Sonnet 4.6</strong>；複雜多份比對選 <strong>Opus 4.6</strong>（Adaptive Thinking）；快速摘要選 <strong>Haiku 4.5</strong>。</div>
+  </div>
+
+  <!-- Profile (optional, collapsible) -->
+  <div class="card collapsible">
+    <div class="chead" onclick="togCard('profileBody','profileChev')">
+      <div class="ctitle">👤 個人基本資訊 <span class="opt-badge">選填</span></div>
+      <span class="chevron" id="profileChev">▼</span>
+    </div>
+    <div class="cbody" id="profileBody">
+      <div style="font-size:.73rem;color:var(--muted);margin-bottom:10px">填入後可產生更精準的 Deep Research 補強 Prompt，不填仍可正常分析。</div>
+      <div class="fgrid">
+        <div class="ff"><label>年齡</label><input type="number" id="pAge" placeholder="例：38" min="18" max="80"></div>
+        <div class="ff"><label>性別</label><select id="pGender"><option value="">請選擇</option><option>男性</option><option>女性</option></select></div>
+        <div class="ff"><label>家庭狀況</label><select id="pFamily"><option value="">請選擇</option><option>單身無扶養</option><option>已婚無子女</option><option>已婚有子女</option><option>單親家庭</option></select></div>
+        <div class="ff"><label>職業類別</label><select id="pJob"><option value="">請選擇</option><option>內勤辦公室</option><option>外勤業務</option><option>體力勞動</option><option>自營業主</option><option>醫療/高風險</option></select></div>
+        <div class="ff"><label>月收入（元）</label><input type="number" id="pIncome" placeholder="例：60000"></div>
+        <div class="ff"><label>每月可增保費（元）</label><input type="number" id="pBudget" placeholder="例：3000"></div>
+        <div class="ff"><label>房貸月付（元）</label><input type="number" id="pLoan" placeholder="例：20000"></div>
+        <div class="ff"><label>扶養人數</label><input type="number" id="pDep" placeholder="例：2" min="0"></div>
+        <div class="ff"><label>優先補強方向</label><select id="pPri"><option value="">AI 判斷</option><option>重大疾病保障</option><option>長期照護保障</option><option>失能收入保障</option><option>退休年金規劃</option><option>醫療實支實付</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Need Calculator (optional, collapsible) -->
+  <div class="card collapsible">
+    <div class="chead" onclick="togCard('calcBody','calcChev')">
+      <div class="ctitle">🧮 保障需求試算器 <span class="opt-badge">選填</span></div>
+      <span class="chevron" id="calcChev">▼</span>
+    </div>
+    <div class="cbody" id="calcBody">
+      <div style="font-size:.73rem;color:var(--muted);margin-bottom:10px">依國際通用公式試算您建議的壽險、醫療、意外保額，作為分析參考基準。</div>
+      <div class="fgrid">
+        <div class="ff"><label>年收入（元）</label><input type="number" id="cIncome" placeholder="例：720000" oninput="runCalc()"></div>
+        <div class="ff"><label>家庭年支出（元）</label><input type="number" id="cExpense" placeholder="例：480000" oninput="runCalc()"></div>
+        <div class="ff"><label>房貸餘額（元）</label><input type="number" id="cLoan" placeholder="例：5000000" oninput="runCalc()"></div>
+        <div class="ff"><label>扶養年數</label><input type="number" id="cYears" placeholder="例：20" min="0" oninput="runCalc()"></div>
+      </div>
+      <div id="calcResult" style="display:none;margin-top:12px">
+        <div class="dash-grid" id="calcBoxes"></div>
+        <div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-top:6px">※ 壽險建議額 = 家庭支出×扶養年數＋房貸餘額；醫療備援 = 年收入×0.3；意外險建議 = 年收入×5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Policy input -->
+  <div class="card">
+    <div class="ctitle">📄 保單資料輸入</div>
+    <div class="pnote"><span>🔒</span><span>原始資料僅存於瀏覽器記憶體，個資遮蔽後才送 AI，全程不上傳伺服器。</span></div>
+
+    <!-- Multi-policy list -->
+    <div id="policyList" class="policy-list" style="display:none"></div>
+
+    <!-- Input tabs -->
+    <div class="pdf-tabs">
+      <div class="ptab active" onclick="switchPTab(0)">📋 壽險公會 PDF</div>
+      <div class="ptab" onclick="switchPTab(1)">📁 一般上傳</div>
+      <div class="ptab" onclick="switchPTab(2)">✏️ 貼上文字</div>
+    </div>
+
+    <!-- Tab 0: 壽險公會PDF -->
+    <div class="ptab-body" id="ptab0">
+
+      <!-- Reminder link to scenario A guide -->
+      <div style="display:flex;align-items:center;gap:9px;padding:11px 14px;background:rgba(44,62,122,.06);border:1px solid rgba(44,62,122,.18);border-radius:9px;margin-bottom:12px;font-size:.88rem;color:var(--deep)">
+        <span style="font-size:1.1rem">💡</span>
+        <span>還沒有壽險公會 PDF？<strong style="cursor:pointer;text-decoration:underline" onclick="scrollToSceneA()">展開上方「情境 A」查看申請步驟</strong>，約 10 分鐘可取得。</span>
+      </div>
+
+      <div class="warnbox"><span>🔒</span><span>上傳後在瀏覽器本機解密，密碼不離開您的裝置，解密後個資仍需經遮蔽步驟才送 AI。</span></div>
+      <div class="upload-zone" id="pdfZone" ondragover="dzDrag(event,true)" ondragleave="dzDrag(event,false)" ondrop="dzDrop(event,'pdf')">
+        <input type="file" accept=".pdf" onchange="handlePDF(event)">
+        <div class="uz-ic">📋</div>
+        <h3>拖曳壽險公會 PDF，或點擊選擇</h3>
+        <p>支援有密碼保護的 PDF</p>
+      </div>
+      <div class="pw-row">
+        <div class="ff"><label>PDF 解密密碼（通常為身份證字號）</label><input type="text" id="pdfPwd" placeholder="例：A123456789" style="text-transform:uppercase" autocomplete="off"></div>
+        <button class="btn btn-s" onclick="decryptPDF()">🔓 解密並萃取</button>
+      </div>
+      <div id="pdfStatus" style="font-size:.74rem;color:var(--muted);margin-top:7px;min-height:16px"></div>
+    </div>
+
+    <!-- Tab 1: 一般上傳 -->
+    <div class="ptab-body" id="ptab1" style="display:none">
+      <div class="upload-zone" id="fileZone" ondragover="dzDrag(event,true)" ondragleave="dzDrag(event,false)" ondrop="dzDrop(event,'file')">
+        <input type="file" accept=".txt,.pdf" onchange="handleFile(event)">
+        <div class="uz-ic">📂</div>
+        <h3>拖曳 .txt 或 .pdf 檔案，或點擊選擇</h3>
+        <p>無密碼 PDF 或純文字檔</p>
+      </div>
+    </div>
+
+    <!-- Tab 2: 貼上 -->
+    <div class="ptab-body" id="ptab2" style="display:none">
+      <textarea id="policyText" placeholder="請貼上保單條款、保障項目、保費明細...&#10;&#10;或直接貼上壽險公會查詢結果的文字內容"></textarea>
+    </div>
+
+    <div class="brow">
+      <button class="btn btn-p" onclick="goStep2()">下一步：個資遮蔽 →</button>
+      <button class="btn btn-s" onclick="addPolicy()" id="addBtn" style="display:none">➕ 再加一份保單</button>
+      <button class="btn btn-s" onclick="loadSample()">📋 範例保單</button>
+    </div>
+  </div>
+</div><!-- /step1 -->
+
+<!-- ════ STEP 2 ════ -->
+<div id="step2" style="display:none">
+  <div class="warnbox"><span>⚠️</span><span>保單含身份、財務、健康史等敏感資訊，建議遮蔽所有可識別欄位後再送 AI 分析。</span></div>
+  <div class="card">
+    <div class="ctitle">🔴 選擇要遮蔽的個資類型</div>
+    <p style="font-size:.77rem;color:var(--muted);margin-bottom:11px">勾選後以「███」取代，建議全選。</p>
+    <div class="piigrid" id="piigrid"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">👁 遮蔽後預覽（AI 實際收到的內容）</div>
+    <div class="prev-box" id="prevBox">（請先輸入保單內容）</div>
+    <div class="brow"><button class="btn btn-s" onclick="refreshPrev()">🔄 更新預覽</button></div>
+  </div>
+  <div class="brow">
+    <button class="btn btn-s" onclick="goStep(1)">← 返回</button>
+    <button class="btn btn-a" onclick="goStep3()" id="analyzeBtn">🤖 送出 AI 分析</button>
+  </div>
+</div>
+
+<!-- ════ STEP 3 ════ -->
+<div id="step3" style="display:none">
+  <div id="loadingDiv" class="card" style="display:none">
+    <div class="loading"><div class="spin"></div><span id="loadMsg">AI 分析中...</span></div>
+  </div>
+
+  <div id="resultDiv" style="display:none">
+
+    <!-- ══ 第一層：重點摘要卡 ══ -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="ctitle">📋 重點摘要</div>
+      <div class="agrid" style="margin-bottom:0">
+        <div class="sring">
+          <div class="rw">
+            <svg width="92" height="92" viewBox="0 0 92 92">
+              <circle cx="46" cy="46" r="38" fill="none" stroke="#e8e0d0" stroke-width="8"/>
+              <circle id="scoreCirc" cx="46" cy="46" r="38" fill="none" stroke="#c8a96e" stroke-width="8"
+                stroke-dasharray="239" stroke-dashoffset="239" stroke-linecap="round"
+                style="transition:stroke-dashoffset 1.2s ease"/>
+            </svg>
+            <div class="rv"><span id="scoreNum">—</span><small>保障分數</small></div>
+          </div>
+          <div style="font-size:.88rem;color:var(--muted);text-align:center;margin-top:6px;line-height:1.6;padding:0 4px" id="scoreDesc"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:10px" id="summaryPts"></div>
+      </div>
+      <div id="urgentDiv" style="margin-top:12px"></div>
+      <div style="margin-top:12px;padding:13px 16px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.2);border-radius:9px;display:none" id="overallAdviceWrap">
+        <div style="font-size:.82rem;font-weight:700;color:var(--accent2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">💬 整體建議</div>
+        <div style="font-size:.95rem;color:var(--ink);line-height:1.85" id="overallAdvice"></div>
+      </div>
+    </div>
+
+    <!-- ══ Tabs ══ -->
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:11px">
+      <div class="tabs" style="margin:0">
+        <div class="tab active" onclick="switchTab('main')">📊 完整分析</div>
+        <div class="tab" onclick="switchTab('policies')">📄 我的保單</div>
+        <div class="tab" onclick="switchTab('dash')">📈 儀表板</div>
+        <div class="tab" onclick="switchTab('claim')">🏥 理賠試算</div>
+        <div class="tab" onclick="switchTab('raw')">📝 原始</div>
+      </div>
+      <div class="mind" id="modelInd">模型：<strong>—</strong></div>
+    </div>
+
+    <!-- ══ Tab: 完整分析 ══ -->
+    <div id="tabMain">
+      <div class="card">
+        <div class="ctitle">✅ 保障優點</div>
+        <div id="prosDiv"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">⚠️ 保障缺口（逐項說明）</div>
+        <div style="font-size:.88rem;color:var(--muted);margin-bottom:12px">🔴 緊急　🟡 近期留意　🟢 未來規劃</div>
+        <div id="gapDiv"></div>
+        <div id="consDiv" style="display:none"></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">💡 補強建議（含行動步驟）</div>
+        <ul class="recs" id="recsDiv"></ul>
+      </div>
+      <div class="card collapsible">
+        <div class="chead" onclick="togCard('privBody','privChev')">
+          <div class="ctitle">🔒 個資保護說明 <span class="opt-badge">點擊展開</span></div>
+          <span class="chevron" id="privChev">▼</span>
+        </div>
+        <div class="cbody" id="privBody">
+          <div id="privNote" style="font-size:.9rem;line-height:1.8;color:var(--muted)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Tab: 我的保單 ══ -->
+    <div id="tabPolicies" style="display:none">
+      <div class="card">
+        <div class="ctitle">📄 現有保單逐一說明</div>
+        <div style="font-size:.88rem;color:var(--muted);margin-bottom:12px">AI 從您的資料辨識出的保單，一句話說明每張保單保了什麼。</div>
+        <div id="policiesDiv"></div>
+      </div>
+    </div>
+
+    <!-- Tab: dashboard -->
+    <div id="tabDash" style="display:none">
+      <div class="card">
+        <div class="ctitle">📈 保費總覽儀表板</div>
+        <div class="dash-grid" id="dashBoxes"></div>
+        <div class="chart-wrap"><canvas id="pieChart" width="260" height="260"></canvas></div>
+        <div id="dashNote" style="font-size:.74rem;color:var(--muted);line-height:1.65;margin-top:8px"></div>
+      </div>
+      <div class="card collapsible">
+        <div class="chead" onclick="togCard('tlBody','tlChev')">
+          <div class="ctitle">📅 保單時間軸</div>
+          <span class="chevron" id="tlChev">▼</span>
+        </div>
+        <div class="cbody" id="tlBody">
+          <div class="timeline" id="tlDiv"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: claim sim -->
+    <div id="tabClaim" style="display:none">
+      <div class="card">
+        <div class="ctitle">🏥 理賠情境試算 <span class="opt-badge">選填情境</span></div>
+        <div style="font-size:.73rem;color:var(--muted);margin-bottom:12px">輸入假設情境，試算現有保單大約能賠多少、自費多少。</div>
+        <div class="fgrid" style="margin-bottom:12px">
+          <div class="ff"><label>情境類型</label>
+            <select id="claimType" onchange="runClaim()">
+              <option value="hosp">住院</option>
+              <option value="cancer">罹患癌症</option>
+              <option value="accident">重大意外</option>
+              <option value="disable">失能</option>
+            </select>
+          </div>
+          <div class="ff"><label>住院天數（若適用）</label><input type="number" id="claimDays" placeholder="例：14" min="1" oninput="runClaim()"></div>
+          <div class="ff"><label>預估醫療花費（元）</label><input type="number" id="claimCost" placeholder="例：200000" oninput="runClaim()"></div>
+        </div>
+        <div class="claim-grid" id="claimResults"></div>
+        <div class="claim-note" id="claimNote"></div>
+      </div>
+    </div>
+
+    <!-- Tab: raw -->
+    <pre id="rawOut"></pre>
+
+    <!-- Deep Research block -->
+    <div class="deep-block" id="deepBlock" style="display:none">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
+        <span style="font-size:1.3rem">🔍</span>
+        <h2>下一步：用 Deep Research 查條款與市場補強產品</h2>
+      </div>
+      <div class="deep-desc">
+        以下 Prompt 包含兩部分：<strong>①查現有保單條款、停售風險、理賠難易度</strong>，以及<strong>②搜尋市場補強產品推薦</strong>。<br>
+        複製後貼到 <strong>Claude.ai</strong>，開啟「<strong>深度研究</strong>」模式送出即可。
+      </div>
+      <div class="dpbox" id="dpBox"></div>
+      <div class="brow">
+        <button class="btn btn-d" onclick="copyPrompt()"><span id="copyIc">📋</span><span id="copyTx">複製 Deep Research Prompt</span></button>
+        <a href="https://claude.ai" target="_blank" class="btn btn-cp">🌐 前往 Claude.ai</a>
+      </div>
+      <div class="deep-how">
+        <h4>📖 如何使用研究模式</h4>
+        <ol>
+          <li>點「前往 Claude.ai」或開啟 <a href="https://claude.ai" target="_blank">claude.ai</a></li>
+          <li>在輸入框旁找到「<strong>研究</strong>」按鈕（或選單中的「深度研究」）並開啟</li>
+          <li>貼上已複製的 Prompt，送出</li>
+          <li>Claude 自動執行多輪搜尋，比較條款與市場產品後回覆</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="brow">
+      <button class="btn btn-s" onclick="goStep(1)">🔄 分析另一份保單</button>
+      <button class="btn btn-s" onclick="openExpModal()">📤 匯出報告</button>
+    </div>
+  </div>
+</div><!-- /step3 -->
+
+<!-- ══ 知識專區 ══ -->
+<div style="margin-top:8px">
+  <div class="ctitle" style="padding:0 4px;margin-bottom:10px">📚 保障知識專區（點擊展開）</div>
+
+  <!-- 癌症保障 -->
+  <div class="kpanel">
+    <div class="kpanel-head" onclick="togKP('cancer')">
+      <div class="kpanel-hl">
+        <span style="font-size:1.2rem">🎗️</span>
+        <h3>2024 台灣十大癌症死因 × 對應保險規劃</h3>
+        <span class="sbadge b" style="font-size:.72rem">最新衛福部資料</span>
+      </div>
+      <span class="chevron" id="cancer-chev">▼</span>
+    </div>
+    <div class="kpanel-body" id="cancer-body">
+      <div style="font-size:.88rem;color:var(--muted);line-height:1.7;margin-top:12px;margin-bottom:4px">
+        2024 年台灣癌症死亡人數 54,032 人，佔總死亡 26.8%，平均每 9 分 45 秒就有一人死於癌症，連續 43 年位居十大死因首位。點擊各癌症展開對應的保險建議：
+      </div>
+      <div class="cancer-grid" id="cancerGrid"></div>
+      <div style="margin-top:14px;padding:11px 14px;background:rgba(200,169,110,.07);border-radius:8px;font-size:.85rem;line-height:1.75;color:#4a4840">
+        💡 <strong>通用建議：</strong>無論哪種癌症，<strong>重大傷病險（實支實付）</strong>是最核心的保障，搭配<strong>醫療實支實付險</strong>覆蓋住院與手術費用，<strong>癌症險</strong>則提供額外的一次給付作為治療期間的生活補貼。
+      </div>
+    </div>
+  </div>
+
+  <!-- 長照規劃 -->
+  <div class="kpanel">
+    <div class="kpanel-head" onclick="togKP('ltc')">
+      <div class="kpanel-hl">
+        <span style="font-size:1.2rem">👴</span>
+        <h3>高齡化社會：長照完整保障規劃指南</h3>
+        <span class="sbadge g" style="font-size:.72rem">超高齡社會必讀</span>
+      </div>
+      <span class="chevron" id="ltc-chev">▼</span>
+    </div>
+    <div class="kpanel-body" id="ltc-body">
+      <div style="font-size:.88rem;color:var(--muted);line-height:1.75;margin-top:12px">
+        台灣 2025 年正式邁入超高齡社會，每 5 人就有 1 人年滿 65 歲。長者平均需要照顧的時間約 8~10 年，每月相關費用從 2 萬元起跳，重度失能可能超過 7 萬元。
+      </div>
+
+      <div class="section-label2">長照費用實際要花多少？</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div class="dbox"><div class="dval" style="font-size:1.2rem">2~3萬</div><div class="dlbl">輕度失能/月</div></div>
+        <div class="dbox warn"><div class="dval" style="font-size:1.2rem">4~5萬</div><div class="dlbl">中度失能/月</div></div>
+        <div class="dbox warn"><div class="dval" style="font-size:1.2rem">7萬+</div><div class="dlbl">重度失能/月</div></div>
+      </div>
+
+      <div class="gov-box">
+        🏛️ <strong>政府長照 2.0 能補多少？</strong><br>
+        每月補助約 1~3 萬元（依失能等級與服務類型），<strong>有排富條款</strong>，僅能涵蓋部分需求。長照 3.0 預計 115 年（2026）上路，補助範圍將擴大，但商業保險仍是不可或缺的補充。
+      </div>
+
+      <div class="section-label2">三種商業保險比較</div>
+      <table class="compare-table">
+        <tr><th>險種</th><th>理賠條件</th><th>給付方式</th><th>適合對象</th></tr>
+        <tr>
+          <td><strong>長期照護險</strong><br><span style="font-size:.75rem;color:var(--muted)">長照險</span></td>
+          <td>巴氏量表：6項 ADL 有 3 項以上無法自理，且持續 90 天以上；或失智達 CDR 2 分以上</td>
+          <td>月給付（終身或定期）</td>
+          <td>高齡長輩、慢性病族群</td>
+        </tr>
+        <tr>
+          <td><strong>失能扶助險</strong><br><span style="font-size:.75rem;color:var(--muted)">失扶險</span></td>
+          <td>符合失能等級 1~6 級（2024/7 起僅保意外失能，疾病失能已全面停售）</td>
+          <td>一次金或月扶助金</td>
+          <td>職場工作者、家庭支柱</td>
+        </tr>
+        <tr>
+          <td><strong>嚴重特定傷病險</strong><br><span style="font-size:.75rem;color:var(--muted)">特傷險</span></td>
+          <td>符合 22 項或 36 項特定重大傷病診斷（失智、中風、癌症等）</td>
+          <td>一次給付</td>
+          <td>想補充長照前期費用</td>
+        </tr>
+      </table>
+
+      <div class="section-label2">⚠️ 重要：疾病失能險已全面停售</div>
+      <div style="padding:11px 14px;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.2);border-radius:8px;font-size:.86rem;line-height:1.75;margin-bottom:10px">
+        2024 年 7 月 1 日起，保險公司不能再銷售新的「疾病失能險」，目前市場販售的失能險都只保障意外失能。如果您手上有舊的疾病失能險（含疾病造成的失能），<strong>務必保留，停售商品已無法再購買</strong>。
+      </div>
+
+      <div class="section-label2">幾歲買最划算？</div>
+      <div class="ltc-grid">
+        <div class="ltc-card highlight">
+          <div class="ltc-title">🟢 40~50 歲（黃金時機）</div>
+          <div class="ltc-pros">✓ 保費最低，體況通過機率高<br>✓ 長期累積保障最完整<br>✓ 儲蓄型長照險此時買 CP 值最高</div>
+          <div class="ltc-cons">✗ 需要長期繳費，資金壓力需評估</div>
+        </div>
+        <div class="ltc-card">
+          <div class="ltc-title">🟡 50~60 歲（仍可投保）</div>
+          <div class="ltc-pros">✓ 多數商品仍可投保<br>✓ 用一年期附約降低初期費用</div>
+          <div class="ltc-cons">✗ 保費明顯升高<br>✗ 體況問題可能影響核保</div>
+        </div>
+        <div class="ltc-card">
+          <div class="ltc-title">🔴 60 歲以上（難度增加）</div>
+          <div class="ltc-pros">✓ 仍有部分商品可投保</div>
+          <div class="ltc-cons">✗ 保費高、核保嚴格<br>✗ 許多終身型已無法投保<br>✗ 建議改以一年期附約為主</div>
+        </div>
+      </div>
+
+      <div class="section-label2">完整長照保障建議組合</div>
+      <div class="ltc-grid">
+        <div class="ltc-card highlight">
+          <div class="ltc-title">基本組合（月預算 2,000~3,000 元）</div>
+          <div style="font-size:.85rem;line-height:1.8;color:#3a3830">
+            ① 長期照護險（月給 3 萬）<br>
+            ② 醫療實支實付險（補住院費用）<br>
+            ③ 嚴重特定傷病險一次金（補前期費用）
+          </div>
+        </div>
+        <div class="ltc-card">
+          <div class="ltc-title">完整組合（月預算 4,000~6,000 元）</div>
+          <div style="font-size:.85rem;line-height:1.8;color:#3a3830">
+            ① 長期照護險（月給 5 萬）<br>
+            ② 失能扶助險（意外失能）<br>
+            ③ 醫療實支實付險<br>
+            ④ 嚴重特定傷病險<br>
+            ⑤ 退休年金型保單（補退休生活費）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 申請資格門檻 -->
+  <div class="kpanel">
+    <div class="kpanel-head" onclick="togKP('claim-guide')">
+      <div class="kpanel-hl">
+        <span style="font-size:1.2rem">📋</span>
+        <h3>各險種申請資格與理賠門檻說明</h3>
+        <span class="sbadge o" style="font-size:.72rem">申請前必看</span>
+      </div>
+      <span class="chevron" id="claim-guide-chev">▼</span>
+    </div>
+    <div class="kpanel-body" id="claim-guide-body">
+      <table class="compare-table" style="margin-top:12px">
+        <tr><th>險種</th><th>理賠條件</th><th>需要哪些文件</th><th>注意事項</th></tr>
+        <tr>
+          <td><strong>壽險</strong></td>
+          <td>身故或全殘（最單純）</td>
+          <td>死亡證明書、戶籍謄本、受益人身分證</td>
+          <td>自殺通常有 2 年等待期</td>
+        </tr>
+        <tr>
+          <td><strong>醫療險（日額型）</strong></td>
+          <td>住院每日給付，通常需住院 1 天以上</td>
+          <td>住院證明、診斷書、收據</td>
+          <td>門診手術日益普遍，確認保單是否涵蓋</td>
+        </tr>
+        <tr>
+          <td><strong>醫療險（實支實付）</strong></td>
+          <td>住院或手術實際花費，憑收據申請</td>
+          <td>醫療費用收據正本、診斷書</td>
+          <td>收據正本只能用一份，第二份保單需副本；需確認「雜費限額」</td>
+        </tr>
+        <tr>
+          <td><strong>重大傷病險</strong></td>
+          <td>取得健保重大傷病卡，或醫師診斷書確認符合條款定義的重大傷病</td>
+          <td>重大傷病卡影本、診斷書</td>
+          <td>各保單定義的重大傷病項目不同，新式 22 項優於傳統 6 項</td>
+        </tr>
+        <tr>
+          <td><strong>癌症險</strong></td>
+          <td>確診為保單定義的癌症（通常需病理報告）</td>
+          <td>病理切片報告、診斷書</td>
+          <td>原位癌與侵襲性癌給付金額差異大，確認保單如何定義</td>
+        </tr>
+        <tr>
+          <td><strong>失能扶助險</strong></td>
+          <td>符合失能等級 1~11 級（依等級給不同比例）；機能喪失類需觀察 6 個月</td>
+          <td>診斷書、失能診斷書（保險公司指定格式）</td>
+          <td>2024/7 起疾病失能險停售，現售僅保意外失能</td>
+        </tr>
+        <tr>
+          <td><strong>長期照護險</strong></td>
+          <td>巴氏量表 ADL 6 項中有 3 項以上無法自理，且持續 90 天以上；或失智 CDR ≥ 2</td>
+          <td>巴氏量表評估報告、診斷書、醫師評估</td>
+          <td>需定期重新評估；部分保單有 90 天等待期</td>
+        </tr>
+        <tr>
+          <td><strong>意外險</strong></td>
+          <td>外來、突發、非疾病的意外事故造成身故或失能</td>
+          <td>診斷書、意外事故證明（警察報告等）</td>
+          <td>「意外」定義嚴格，疾病引發的需特別確認；職業等級影響保費</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- pdf.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="console.warn('pdf.js failed to load')"></script>
+<script>
+if(typeof pdfjsLib!=='undefined') pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedModel='claude-sonnet-4-6';
+let policies=[]; // [{name, text}]
+let lastResult=null;
+let pieInstance=null;
+
+// ── Models ────────────────────────────────────────────────────────────────────
+const MODELS=[
+  {id:'claude-opus-4-6',name:'Claude Opus 4.6',e:'🧠',desc:'最強推理，Adaptive Thinking，適合複雜多份比對。',tags:['最高精度','Adaptive Thinking','1M ctx']},
+  {id:'claude-sonnet-4-6',name:'Claude Sonnet 4.6',e:'⚡',desc:'速度與智能最佳平衡，絕大多數保單首選。',tags:['★ 推薦','速度快','費用合理'],rec:true},
+  {id:'claude-haiku-4-5-20251001',name:'Claude Haiku 4.5',e:'🚀',desc:'最快最省費，快速摘要或預算有限場景。',tags:['最快','最省費']}
+];
+function buildModels(){
+  const g=document.getElementById('mgrid');g.innerHTML='';
+  MODELS.forEach(m=>{
+    const el=document.createElement('div');
+    el.className='mc'+(m.id===selectedModel?' sel':'');
+    el.innerHTML=`${m.id===selectedModel?'<div class="selbadge">✓ 已選</div>':''}
+      <div class="mn">${m.e} ${m.name}</div><div class="mid">${m.id}</div>
+      <div class="md">${m.desc}</div>
+      <div class="mtags">${m.tags.map(t=>`<span class="mtag">${t}</span>`).join('')}${m.rec?'<span class="mtag" style="background:rgba(74,124,111,.14);color:#2d5e54">★</span>':''}</div>`;
+    el.onclick=()=>{selectedModel=m.id;buildModels();};
+    g.appendChild(el);
+  });
+}
+
+// ── PII ───────────────────────────────────────────────────────────────────────
+const PIIS=[
+  {id:'name',label:'👤 姓名',p:[/([\u4e00-\u9fa5]{2,4}(?:先生|女士|小姐)?)/g,/保戶[：:]\s*[\u4e00-\u9fa5]{2,5}/g]},
+  {id:'id',label:'🪪 身份證字號',p:[/[A-Z][12]\d{8}/g]},
+  {id:'bday',label:'🎂 出生年月日',p:[/\d{2,4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}日?/g]},
+  {id:'phone',label:'📱 電話',p:[/0[0-9]{1,2}[-\s]?\d{6,8}/g]},
+  {id:'addr',label:'🏠 地址',p:[/[\u4e00-\u9fa5]{1,4}[縣市區鄉鎮][\u4e00-\u9fa5\d號路街巷弄樓]{4,30}/g]},
+  {id:'email',label:'📧 Email',p:[/[\w.+-]+@[\w-]+\.[\w.]+/g]},
+  {id:'acct',label:'🏦 帳號車牌',p:[/\d{12,16}/g,/[A-Z]{2,3}-?\d{4}/g]},
+  {id:'health',label:'🏥 病史健康',p:[/(高血壓|糖尿病|癌症|心臟病|病史|既往症|體況|服藥|藥物)[^。\n]{0,20}/g]},
+  {id:'prem',label:'💰 保費金額',p:[/[\d,]+\s*元/g]},
+  {id:'ben',label:'👨‍👩‍👧 受益人',p:[/受益人[：:]\s*[\u4e00-\u9fa5]{2,6}/g]},
+];
+let maskedPII=new Set(['name','id','bday','phone','addr','email','acct','health','ben']);
+
+function buildPII(){
+  const g=document.getElementById('piigrid');g.innerHTML='';
+  PIIS.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='pii'+(maskedPII.has(p.id)?' on':'');
+    el.innerHTML=`<div class="dot"></div><span>${p.label}</span>`;
+    el.onclick=()=>{maskedPII.has(p.id)?maskedPII.delete(p.id):maskedPII.add(p.id);el.classList.toggle('on',maskedPII.has(p.id));refreshPrev();};
+    g.appendChild(el);
+  });
+}
+function maskText(t){
+  let r=t;
+  PIIS.forEach(p=>{if(!maskedPII.has(p.id))return;p.p.forEach(re=>{r=r.replace(re,m=>'█'.repeat(Math.min(m.length,8)));});});
+  return r;
+}
+function getAllText(){return policies.map(p=>p.text).join('\n\n══════════════\n\n');}
+function refreshPrev(){
+  const pv=document.getElementById('prevBox');
+  const t=getAllText();
+  if(!t.trim()){pv.textContent='（請先輸入保單內容）';return;}
+  pv.textContent=maskText(t);
+}
+
+// ── Policy list UI ────────────────────────────────────────────────────────────
+function renderPolicyList(){
+  const list=document.getElementById('policyList');
+  const addBtn=document.getElementById('addBtn');
+  if(policies.length===0){list.style.display='none';addBtn.style.display='none';return;}
+  list.style.display='flex';addBtn.style.display='inline-flex';
+  list.innerHTML=policies.map((p,i)=>`
+    <div class="policy-item">
+      <span style="font-size:.9rem">📄</span>
+      <span class="pi-name">${p.name}</span>
+      <span style="font-size:.7rem;color:var(--muted)">${p.text.length} 字</span>
+      <button class="pi-rm" onclick="removePolicy(${i})">✕</button>
+    </div>`).join('');
+}
+function addPolicy(){
+  const txt=getCurrentText();
+  if(!txt.trim()){alert('請先輸入保單內容再加入');return;}
+  policies.push({name:`保單 ${policies.length+1}`,text:txt});
+  clearInputs();
+  renderPolicyList();
+}
+function removePolicy(i){policies.splice(i,1);renderPolicyList();}
+function getCurrentText(){return document.getElementById('policyText').value.trim();}
+function clearInputs(){document.getElementById('policyText').value='';}
+
+// ── PDF Tabs ──────────────────────────────────────────────────────────────────
+function switchPTab(n){
+  document.querySelectorAll('.ptab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.ptab-body').forEach((b,i)=>b.style.display=i===n?'block':'none');
+}
+
+// ── PDF handling ──────────────────────────────────────────────────────────────
+let pendingPDFFile=null;
+function handlePDF(e){
+  const f=e.target.files[0];if(!f)return;
+  pendingPDFFile=f;
+  document.getElementById('pdfStatus').textContent=`已選擇：${f.name}，請輸入密碼後點解密。`;
+}
+async function decryptPDF(){
+  if(!pendingPDFFile){alert('請先選擇 PDF 檔案');return;}
+  const pwd=document.getElementById('pdfPwd').value.trim();
+  const st=document.getElementById('pdfStatus');
+  st.textContent='解密中…';
+  try{
+    const ab=await pendingPDFFile.arrayBuffer();
+    const loadTask=pdfjsLib.getDocument({data:new Uint8Array(ab),password:pwd});
+    const pdf=await loadTask.promise;
+    let full='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const pg=await pdf.getPage(i);
+      const tc=await pg.getTextContent();
+      full+=tc.items.map(it=>it.str).join(' ')+'\n';
+    }
+    document.getElementById('policyText').value=full;
+    switchPTab(2);
+    st.textContent=`✅ 解密成功，已萃取 ${full.length} 字，請切換至「貼上文字」頁確認內容。`;
+  }catch(e){
+    st.textContent=`❌ 解密失敗：${e.message}。請確認密碼是否正確（通常為身份證字號大寫）。`;
+  }
+}
+function handleFile(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.name.endsWith('.pdf')){
+    pendingPDFFile=f;
+    const pwd=prompt('請輸入 PDF 密碼（無密碼請留空）','');
+    decryptPDFDirect(f,pwd||'');
+  }else{
+    const r=new FileReader();r.onload=ev=>{document.getElementById('policyText').value=ev.target.result;switchPTab(2);};r.readAsText(f);
+  }
+}
+async function decryptPDFDirect(f,pwd){
+  try{
+    const ab=await f.arrayBuffer();
+    const loadTask=pdfjsLib.getDocument({data:new Uint8Array(ab),password:pwd});
+    const pdf=await loadTask.promise;
+    let full='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const pg=await pdf.getPage(i);
+      const tc=await pg.getTextContent();
+      full+=tc.items.map(it=>it.str).join(' ')+'\n';
+    }
+    document.getElementById('policyText').value=full;
+    switchPTab(2);
+  }catch(e){alert('PDF 讀取失敗：'+e.message);}
+}
+
+// ── Drag/drop ─────────────────────────────────────────────────────────────────
+function dzDrag(e,on){e.preventDefault();e.currentTarget.classList.toggle('drag',on);}
+function dzDrop(e,t){
+  e.preventDefault();e.currentTarget.classList.remove('drag');
+  const f=e.dataTransfer.files[0];if(!f)return;
+  if(t==='pdf'){pendingPDFFile=f;document.getElementById('pdfStatus').textContent=`已選擇：${f.name}`;}
+  else{handleFile({target:{files:[f]}});}
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goStep2(){
+  if(!getKey()){alert('請先輸入 API Key');return;}
+  const txt=getCurrentText();
+  if(txt.trim()) policies.push({name:`保單 ${policies.length+1}`,text:txt});
+  if(policies.length===0){alert('請先輸入保單內容');return;}
+  buildPII();refreshPrev();goStep(2);
+}
+function goStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).style.display=i===n?'block':'none';
+    const s=document.getElementById('s'+i);
+    s.className='step'+(i===n?' active':i<n?' done':'');
+  });
+  if(n===1){policies=[];renderPolicyList();clearInputs();}
+}
+async function goStep3(){
+  const btn=document.getElementById('analyzeBtn');btn.disabled=true;
+  goStep(3);
+  document.getElementById('loadingDiv').style.display='block';
+  document.getElementById('resultDiv').style.display='none';
+  const mname=MODELS.find(m=>m.id===selectedModel)?.name||selectedModel;
+  document.getElementById('loadMsg').textContent=`正在使用 ${mname} 分析保單，請稍候…`;
+  const masked=maskText(getAllText());
+  try{
+    const r=await callAPI(masked);
+    lastResult=r;
+    renderResult(r,masked,mname);
+  }catch(e){
+    const msg=e.message||'';
+    const isCORS=(msg.toLowerCase().includes('fetch')||msg.toLowerCase().includes('cors')||msg.toLowerCase().includes('network')||msg==='Failed to fetch'||msg.includes('NetworkError'));
+    const isKey=(msg.includes('401')||msg.toLowerCase().includes('authentication')||msg.toLowerCase().includes('api key')||msg.toLowerCase().includes('invalid x-api-key'));
+    const isBalance=(msg.includes('402')||msg.toLowerCase().includes('credit')||msg.toLowerCase().includes('balance'));
+    let html='';
+    if(isCORS){
+      html='<div style="padding:20px 24px">'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+        +'<span style="font-size:1.5rem">🚫</span>'
+        +'<div><div style="font-size:1rem;font-weight:700;color:var(--danger)">CORS 錯誤：瀏覽器封鎖了 API 請求</div>'
+        +'<div style="font-size:.85rem;color:var(--muted);margin-top:2px">直接用 file:// 開啟 HTML 檔案時，瀏覽器會封鎖對外部 API 的連線</div></div></div>'
+        +'<div style="background:#f9f6f0;border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px">'
+        +'<div style="font-size:.82rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">解決方法（三選一）</div>'
+        +'<div style="display:flex;flex-direction:column;gap:10px">'
+
+        +'<div style="border:2px solid var(--accent);border-radius:9px;padding:12px 15px;background:rgba(200,169,110,.04)">'
+        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">⭐ 方法一：Python 本機伺服器（最推薦）</div>'
+        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">不需安裝任何軟體，macOS/Linux/Windows 10+ 都有內建 Python。<br>'
+        +'① 在 HTML 檔案的資料夾開「終端機」或「命令提示字元」<br>'
+        +'② 輸入以下指令後按 Enter：<br>'
+        +'<code style="display:inline-block;margin:6px 0;padding:6px 12px;background:var(--ink);color:var(--accent);border-radius:6px;font-size:.88rem;letter-spacing:.02em">python -m http.server 8080</code><br>'
+        +'③ 瀏覽器開啟：<code style="background:rgba(44,62,122,.1);padding:2px 7px;border-radius:4px;color:var(--deep)">http://localhost:8080/insurance-analyzer.html</code></div></div>'
+
+        +'<div style="border:1px solid var(--border);border-radius:9px;padding:12px 15px">'
+        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">🔧 方法二：VS Code + Live Server</div>'
+        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">安裝 <a href="https://code.visualstudio.com" target="_blank" style="color:var(--deep);font-weight:600">VS Code</a> → 安裝擴充套件「Live Server」→ 右鍵 HTML 檔案點「Open with Live Server」</div></div>'
+
+        +'<div style="border:1px solid var(--border);border-radius:9px;padding:12px 15px">'
+        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">💬 方法三：直接在 Claude.ai 使用</div>'
+        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">不需下載檔案，直接在 Claude.ai 對話中使用 Artifact 版本，沒有 CORS 問題。適合只需要偶爾分析的使用者。</div></div>'
+
+        +'</div></div>'
+        +'<button class="btn btn-s" onclick="goStep(2)">← 返回重試</button>'
+        +'</div>';
+    } else if(isKey){
+      html='<div style="padding:20px 24px">'
+        +'<div style="font-size:1rem;font-weight:700;color:var(--danger);margin-bottom:10px">🔑 API Key 無效或未輸入</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);line-height:1.75;margin-bottom:14px">'
+        +'請確認：① Key 是否正確貼上（應為 <code style="background:rgba(26,26,46,.07);padding:1px 6px;border-radius:4px">sk-ant-api03-...</code> 開頭）<br>'
+        +'② 回到 Step 1 重新輸入 Key 並點「💾 儲存本機」</div>'
+        +'<button class="btn btn-s" onclick="goStep(1)">← 回 Step 1 輸入 Key</button>'
+        +'</div>';
+    } else if(isBalance){
+      html='<div style="padding:20px 24px">'
+        +'<div style="font-size:1rem;font-weight:700;color:var(--danger);margin-bottom:10px">💳 帳戶餘額不足</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);line-height:1.75;margin-bottom:14px">'
+        +'請前往 <a href="https://console.anthropic.com" target="_blank" style="color:var(--deep);font-weight:600">console.anthropic.com</a> → Billing → Add credits 儲值後再試。</div>'
+        +'<button class="btn btn-s" onclick="goStep(2)">← 返回重試</button>'
+        +'</div>';
+    } else {
+      html='<div style="padding:20px 24px">'
+        +'<div style="font-size:1rem;font-weight:700;color:var(--danger);margin-bottom:10px">⚠️ 分析失敗</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);margin-bottom:14px">錯誤訊息：'+msg+'</div>'
+        +'<button class="btn btn-s" onclick="goStep(2)">← 返回重試</button>'
+        +'</div>';
+    }
+    document.getElementById('loadingDiv').innerHTML=html;
+  }
+  btn.disabled=false;
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function callAPI(masked){
+  const key=getKey();
+  if(!key)throw new Error('請先輸入 API Key');
+  const prompt=`你是一位親切專業的台灣保險顧問，請用口語化的繁體中文分析以下保單（個資已遮蔽，忽略 █ 符號）。
+
+語言要求：
+- 像家庭醫師解釋報告，簡單易懂，不用保險術語
+- 數字要具體（不說「保額不足」，要說「萬一住院30天目前只夠賠約X萬，可能還差Y萬」）
+- 建議要有行動步驟（說清楚第一步是什麼）
+- 70歲以上長輩也能看懂
+
+只回覆 JSON，不加任何 markdown 或說明文字：
+{
+  "score":<0-100保障完整度>,
+  "scoreDesc":"<一句口語說明，例：您的保障像是有安全帽但還沒安全氣囊>",
+  "urgent":"<最緊急要處理的一件事，一句話，直接說行動>",
+  "keyPoints":["<重點1，15字內>","<重點2，15字內>","<重點3，15字內>"],
+  "pros":[{"title":"<優點標題>","detail":"<2-3句具體說明這個保障保了什麼、能賠多少>"}],
+  "gaps":[{"type":"<缺口名稱>","severity":"high|medium|low","headline":"<一句話說這個缺口的影響>","detail":"<具體說明萬一發生什麼事會差多少錢>","action":"<具體下一步行動>"}],
+  "existingPolicies":[{"company":"<公司>","product":"<商品名>","type":"<險種>","amount":"<保額>","since":"<生效年>","premium":"<年保費>","oneLineSummary":"<一句話說這張保單保了什麼>"}],
+  "recommendations":[{"title":"<建議標題>","priority":"urgent|soon|optional","reason":"<為什麼要做>","action":"<具體怎麼做，第一步是什麼>","estimatedCost":"<大概每月多少錢>"}],
+  "dashData":{"totalPremium":<年繳總保費數字>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},
+  "timeline":[{"name":"<保單名>","since":"<生效年>","years":<繳費年期>,"endYear":<繳費終止年>}],
+  "overallAdvice":"<3-5句整體建議，口語說明現在最重要的事和不用擔心的事>",
+  "privacyNote":"<說明哪些個資已遮蔽>"
+}
+
+保單內容：
+${masked}`;
+
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:selectedModel,max_tokens:1500,messages:[{role:'user',content:prompt}]})
+  });
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
+  const data=await resp.json();
+  const txt=data.content.map(b=>b.text||'').join('');
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+// ── Render result ─────────────────────────────────────────────────────────────
+function renderResult(r,masked,mname){
+  document.getElementById('loadingDiv').style.display='none';
+  document.getElementById('resultDiv').style.display='block';
+  document.getElementById('modelInd').innerHTML=`模型：<strong>${mname}</strong>`;
+
+  const score=Math.min(100,Math.max(0,r.score||0));
+  const circ=2*Math.PI*38;
+  setTimeout(()=>{
+    document.getElementById('scoreCirc').style.strokeDashoffset=circ*(1-score/100);
+    document.getElementById('scoreCirc').style.stroke=score>=70?'#27ae60':score>=40?'#c8a96e':'#c0392b';
+  },100);
+  document.getElementById('scoreNum').textContent=score;
+  document.getElementById('scoreDesc').textContent=r.scoreDesc||'';
+
+  // ── 重點摘要區 ──
+  const sp=document.getElementById('summaryPts');
+  (r.keyPoints||r.summary||[]).forEach(s=>{
+    sp.innerHTML+=`<div style="display:flex;gap:8px;align-items:flex-start;font-size:1rem;line-height:1.7"><span style="color:var(--accent);flex-shrink:0;font-size:1.1rem">◆</span><span>${s}</span></div>`;
+  });
+
+  // ── 最緊急事項 ──
+  if(r.urgent){
+    const urg=document.getElementById('urgentDiv');
+    if(urg) urg.innerHTML=`<div style="display:flex;gap:10px;align-items:flex-start;padding:14px 16px;background:rgba(192,57,43,.07);border:2px solid rgba(192,57,43,.25);border-radius:10px;margin-bottom:4px"><span style="font-size:1.3rem;flex-shrink:0">🚨</span><div><div style="font-size:.8rem;font-weight:700;color:#952020;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">最優先處理</div><div style="font-size:1rem;color:#7a2020;line-height:1.7;font-weight:500">${r.urgent}</div></div></div>`;
+  }
+
+  // ── 整體建議 ──
+  if(r.overallAdvice){
+    const oa=document.getElementById('overallAdvice');
+    const oaw=document.getElementById('overallAdviceWrap');
+    if(oa) oa.textContent=r.overallAdvice;
+    if(oaw) oaw.style.display='block';
+  }
+
+  // ── 優點（有標題+詳情） ──
+  const pros=document.getElementById('prosDiv');
+  (r.pros||[]).forEach(p=>{
+    const isObj=typeof p==='object';
+    if(isObj){
+      pros.innerHTML+=`<div class="detail-card"><div class="dc-title pro-ic">✓ ${p.title}</div><div class="dc-body">${p.detail}</div></div>`;
+    } else {
+      pros.innerHTML+=`<span class="tag pro">✓ ${p}</span>`;
+    }
+  });
+
+  // ── 缺口（有headline+detail+action） ──
+  const gapDiv=document.getElementById('gapDiv');
+  if(gapDiv){
+    (r.gaps||r.cons||[]).forEach(g=>{
+      const isObj=typeof g==='object'&&g.headline;
+      const sev=isObj?g.severity:'medium';
+      const sevColor=sev==='high'?'rgba(192,57,43,.1)':sev==='medium'?'rgba(200,169,110,.12)':'rgba(74,124,111,.08)';
+      const sevBorder=sev==='high'?'rgba(192,57,43,.3)':sev==='medium'?'rgba(200,169,110,.35)':'rgba(74,124,111,.25)';
+      const sevIcon=sev==='high'?'🔴':sev==='medium'?'🟡':'🟢';
+      if(isObj){
+        gapDiv.innerHTML+=`<div class="detail-card" style="background:${sevColor};border-color:${sevBorder}">
+          <div class="dc-title">${sevIcon} ${g.type}</div>
+          <div style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:6px;line-height:1.6">${g.headline}</div>
+          <div class="dc-body" style="margin-bottom:8px">${g.detail}</div>
+          <div style="font-size:.9rem;color:var(--deep);font-weight:600">👉 ${g.action}</div>
+        </div>`;
+      } else {
+        gapDiv.innerHTML+=`<div class="detail-card"><div class="dc-title">🔴 ${g}</div></div>`;
+      }
+    });
+  }
+
+  // ── 補強建議（有優先級+原因+行動+費用） ──
+  const recs=document.getElementById('recsDiv');
+  (r.recommendations||[]).forEach(rec=>{
+    const isObj=typeof rec==='object'&&rec.title;
+    if(isObj){
+      const priColor=rec.priority==='urgent'?'#952020':rec.priority==='soon'?'#7a5c20':'#2d5e54';
+      const priLabel=rec.priority==='urgent'?'🔴 緊急':rec.priority==='soon'?'🟡 近期':' 🟢 未來';
+      recs.innerHTML+=`<div class="detail-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:.78rem;font-weight:700;color:${priColor}">${priLabel}</span>
+          <span class="dc-title" style="margin:0">${rec.title}</span>
+          ${rec.estimatedCost?`<span style="margin-left:auto;font-size:.8rem;color:var(--muted);white-space:nowrap">約 ${rec.estimatedCost}/月</span>`:''}
+        </div>
+        <div class="dc-body" style="margin-bottom:6px"><strong>為什麼：</strong>${rec.reason}</div>
+        <div style="font-size:.9rem;color:var(--deep);font-weight:600">👉 第一步：${rec.action}</div>
+      </div>`;
+    } else {
+      recs.innerHTML+=`<li>→ ${rec}</li>`;
+    }
+  });
+
+  // ── 現有保單逐一說明 ──
+  const polDiv=document.getElementById('policiesDiv');
+  if(polDiv){
+    (r.existingPolicies||[]).forEach(p=>{
+      polDiv.innerHTML+=`<div class="detail-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+          <span class="tag pro" style="font-size:.8rem">${p.type||'—'}</span>
+          <span style="font-size:1rem;font-weight:600">${p.company||''} ${p.product||''}</span>
+        </div>
+        <div style="font-size:.95rem;color:var(--ink);line-height:1.7;margin-bottom:5px">${p.oneLineSummary||''}</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)">
+          ${p.amount?`<span>保額 ${p.amount}</span>`:''}
+          ${p.since?`<span>生效 ${p.since}</span>`:''}
+          ${p.premium?`<span>年繳 ${p.premium}</span>`:''}
+        </div>
+      </div>`;
+    });
+    if(!(r.existingPolicies||[]).length) polDiv.innerHTML='<div style="font-size:.9rem;color:var(--muted);padding:8px">（資料不足，無法列出保單清單）</div>';
+  }
+
+  document.getElementById('privNote').textContent=r.privacyNote||'';
+  renderDash(r);
+  renderTimeline(r);
+  runClaim();
+  document.getElementById('rawOut').textContent=`【遮蔽後內容】\n${masked}\n\n【AI JSON】\n${JSON.stringify(r,null,2)}`;
+  buildDeepPrompt(r);
+  const curM=familyMembers.find(m=>m.id===activeMemberId);
+  if(curM)curM.results=r;
+  renderMemberTabs();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDash(r){
+  const dd=r.dashData||{};
+  const total=dd.totalPremium||0;
+  const income=parseInt(document.getElementById('pIncome').value)||0;
+  const ratio=income>0?((total/(income*12))*100).toFixed(1):null;
+  const byType=dd.byType||{};
+
+  const boxes=document.getElementById('dashBoxes');
+  boxes.innerHTML='';
+  const addBox=(val,lbl,cls='')=>{
+    boxes.innerHTML+=`<div class="dbox ${cls}"><div class="dval">${val}</div><div class="dlbl">${lbl}</div></div>`;
+  };
+  addBox(total?`$${total.toLocaleString()}`:'—','年繳保費總計（元）');
+  addBox(ratio?`${ratio}%`:'—', '佔月收入比',ratio&&parseFloat(ratio)>15?'warn':ratio?'ok':'');
+  addBox((r.existingPolicies||[]).length,'有效保單數量');
+  addBox((r.gaps||[]).filter(g=>g.severity==='high').length,'高優先缺口數','warn');
+
+  // Income ratio note
+  document.getElementById('dashNote').textContent=ratio
+    ? `保費佔月收入 ${ratio}%，建議區間為 10~15%。${parseFloat(ratio)>15?'目前略偏高，可考慮調整保障配置。':parseFloat(ratio)<10?'目前偏低，保障可能不足。':'目前在合理範圍內。'}`
+    : '填入月收入後可計算保費佔收入比例。';
+
+  // Pie chart
+  if(Object.keys(byType).length>0){
+    const labels=Object.keys(byType);
+    const vals=Object.values(byType);
+    const colors=['#c8a96e','#4a7c6f','#2c3e7a','#c0392b','#7a7060'];
+    if(pieInstance)pieInstance.destroy();
+    const ctx=document.getElementById('pieChart').getContext('2d');
+    // Simple manual pie
+    drawPie(ctx,labels,vals,colors);
+  }
+}
+function drawPie(ctx,labels,vals,colors){
+  const total=vals.reduce((a,b)=>a+b,0);
+  if(!total)return;
+  const cx=130,cy=120,r=90;
+  let start=-Math.PI/2;
+  ctx.clearRect(0,0,260,260);
+  vals.forEach((v,i)=>{
+    const slice=(v/total)*2*Math.PI;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+slice);
+    ctx.closePath();ctx.fillStyle=colors[i%colors.length];ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    // label
+    const mid=start+slice/2;
+    const lx=cx+Math.cos(mid)*(r*0.65);
+    const ly=cy+Math.sin(mid)*(r*0.65);
+    ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    if(v/total>0.06)ctx.fillText(`${((v/total)*100).toFixed(0)}%`,lx,ly);
+    start+=slice;
+  });
+  // Legend
+  let ly2=220;
+  labels.forEach((l,i)=>{
+    ctx.fillStyle=colors[i%colors.length];ctx.fillRect(20+i*55,ly2,12,12);
+    ctx.fillStyle='#333';ctx.font='10px sans-serif';ctx.textAlign='left';
+    ctx.fillText(l.substring(0,4),34+i*55,ly2+10);
+  });
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function renderTimeline(r){
+  const tl=document.getElementById('tlDiv');tl.innerHTML='';
+  const tls=r.timeline||[];
+  if(!tls.length){tl.innerHTML='<div style="font-size:.78rem;color:var(--muted)">（資料不足，無法建立時間軸）</div>';return;}
+  const now=new Date().getFullYear();
+  tls.forEach(t=>{
+    const end=t.endYear||'不明';
+    const done=typeof end==='number'&&end<=now;
+    const soon=typeof end==='number'&&end>now&&end<=now+3;
+    tl.innerHTML+=`<div class="tl-item">
+      <div class="tl-dot ${done?'done':soon?'soon':''}"></div>
+      <div class="tl-title">${t.name||'—'}</div>
+      <div class="tl-sub">${t.company||''} · 生效 ${t.since||'—'} · 繳費${t.years||'—'}年 · ${done?'✅ 已繳清':soon?`⚠️ ${end}年繳完`:`繳費至 ${end}年`}</div>
+    </div>`;
+  });
+}
+
+// ── Claim simulator ───────────────────────────────────────────────────────────
+function runClaim(){
+  if(!lastResult)return;
+  const type=document.getElementById('claimType').value;
+  const days=parseInt(document.getElementById('claimDays').value)||14;
+  const cost=parseInt(document.getElementById('claimCost').value)||200000;
+  const r=lastResult;
+  const hasLife=(r.existingPolicies||[]).some(p=>/壽|life/i.test(p.type));
+  const hasMed=(r.existingPolicies||[]).some(p=>/醫療|medical|住院/i.test(p.type));
+  const hasAcc=(r.existingPolicies||[]).some(p=>/意外|accident/i.test(p.type));
+  const hasDis=(r.existingPolicies||[]).some(p=>/失能|disability/i.test(p.type));
+  const hasCancer=(r.existingPolicies||[]).some(p=>/重大|cancer|重疾/i.test(p.type));
+
+  let claim=0,note='';
+  if(type==='hosp'){
+    claim=hasMed?Math.min(days*1500+50000,cost):0;
+    note=hasMed?`估計住院日額 ${days}×1,500 元 + 手術費用，實支實付依收據為準。建議確認是否有實支實付型醫療險。`:'目前無醫療險，全部費用須自費。建議補強住院實支實付醫療險。';
+  }else if(type==='cancer'){
+    claim=hasCancer?500000:hasMed?100000:0;
+    note=hasCancer?'重大疾病險一次給付估約 50萬，另有醫療險可申請住院理賠。':'目前無重大疾病險，高額醫療費用可能需全額自費。強烈建議補強重大傷病險。';
+  }else if(type==='accident'){
+    claim=hasAcc?Math.min(cost,2000000):hasMed?50000:0;
+    note=hasAcc?'意外險可申請意外醫療與失能給付，請確認實際事故等級與條款定義。':'無意外險，建議立即補強，保費低廉但保障高。';
+  }else if(type==='disable'){
+    claim=hasDis?2000000:hasAcc?500000:0;
+    note=hasDis?'失能扶助金每月給付，長期保障較完整。請確認失能等級認定條件。':'無失能相關保障，失能後收入中斷風險極高，強烈建議補強失能扶助險。';
+  }
+
+  const selfPay=Math.max(0,cost-claim);
+  const g=document.getElementById('claimResults');
+  g.innerHTML=`
+    <div class="claim-result"><div class="cr-val">$${claim.toLocaleString()}</div><div class="cr-lbl">估計可獲理賠（元）</div></div>
+    <div class="claim-result"><div class="cr-val red">$${selfPay.toLocaleString()}</div><div class="cr-lbl">估計自費缺口（元）</div></div>
+    <div class="claim-result"><div class="cr-val">${cost>0?((claim/cost)*100).toFixed(0):0}%</div><div class="cr-lbl">費用覆蓋率</div></div>`;
+  document.getElementById('claimNote').textContent='⚠️ '+note+'此為估算值，實際理賠依各保單條款、理賠審核為準。';
+}
+
+// ── Calculator ────────────────────────────────────────────────────────────────
+function runCalc(){
+  const inc=parseInt(document.getElementById('cIncome').value)||0;
+  const exp=parseInt(document.getElementById('cExpense').value)||0;
+  const loan=parseInt(document.getElementById('cLoan').value)||0;
+  const yrs=parseInt(document.getElementById('cYears').value)||20;
+  if(!inc){document.getElementById('calcResult').style.display='none';return;}
+  const life=exp*yrs+loan;
+  const med=Math.round(inc*0.3);
+  const acc=inc*5;
+  const boxes=document.getElementById('calcBoxes');
+  boxes.innerHTML=`
+    <div class="dbox"><div class="dval">$${(life/10000).toFixed(0)}萬</div><div class="dlbl">建議壽險保額</div></div>
+    <div class="dbox"><div class="dval">$${(med/10000).toFixed(0)}萬</div><div class="dlbl">建議醫療備援</div></div>
+    <div class="dbox"><div class="dval">$${(acc/10000).toFixed(0)}萬</div><div class="dlbl">建議意外險保額</div></div>`;
+  document.getElementById('calcResult').style.display='block';
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(t){
+  const tabs=['main','policies','dash','claim','raw'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',tabs[i]===t));
+  document.getElementById('tabMain').style.display=t==='main'?'block':'none';
+  const tp=document.getElementById('tabPolicies'); if(tp) tp.style.display=t==='policies'?'block':'none';
+  document.getElementById('tabDash').style.display=t==='dash'?'block':'none';
+  document.getElementById('tabClaim').style.display=t==='claim'?'block':'none';
+  document.getElementById('rawOut').style.display=t==='raw'?'block':'none';
+}
+
+// ── Deep Research Prompt ──────────────────────────────────────────────────────
+function buildDeepPrompt(r){
+  const age=document.getElementById('pAge').value;
+  const gender=document.getElementById('pGender').value;
+  const family=document.getElementById('pFamily').value;
+  const job=document.getElementById('pJob').value;
+  const budget=document.getElementById('pBudget').value;
+  const priority=document.getElementById('pPri').value;
+
+  const profile=[age&&`${age}歲`,gender,family,job].filter(Boolean).join('、')||'（未提供）';
+  const budgetLine=budget?`每月可增加保費預算：${parseInt(budget).toLocaleString()} 元`:'預算彈性（未指定）';
+  const priLine=priority?`優先補強：${priority}`:'依缺口重要性排序';
+
+  const policies_str=(r.existingPolicies||[]).length
+    ? (r.existingPolicies||[]).map((p,i)=>`${i+1}. ${p.company||''} ${p.product||''} / ${p.type||''} / 保額 ${p.amount||'—'} / 生效 ${p.since||'—'}`).join('\n')
+    : '（請依保障摘要推斷）';
+
+  const gaps_str=(r.gaps||[]).map(g=>`• ${g.type}（${g.severity==='high'?'⚠️高':g.severity==='medium'?'🔶中':'🔵低'}）：${g.reason}`).join('\n')
+    || (r.cons||[]).map(c=>`• ${c}`).join('\n');
+
+  // Build cancer/LTC context from known gaps
+  const hasLTC=(r.gaps||[]).some(g=>/長照|失能|照護/i.test(g.type||''));
+  const hasCancer=(r.gaps||[]).some(g=>/癌|重大|傷病/i.test(g.type||''));
+  const existingTypes=(r.existingPolicies||[]).map(p=>p.type||'').join('、');
+
+  const prompt=`你是台灣專業保險顧問，請開啟深度研究模式，幫我完成以下兩件事：
+
+══════════════════════════════════════
+【第一部分】現有保單條款深度查詢
+══════════════════════════════════════
+
+我的現有保單：
+${policies_str}
+
+請針對每一張保單，搜尋並回答：
+
+【A. 條款細節】
+□ 重大疾病險：傳統6項 / 新式22項 / 36項重疾？
+□ 醫療險：日額型 / 實支實付？住院才賠或門診也賠？
+□ 失能險：一次給付 / 每月扶助金？等待期多長？
+□ 其他險種：實際保障範圍與理賠條件
+
+【B. 停售風險評估】
+□ 此商品目前是否仍在販售？
+□ 若已停售，投保人需注意哪些權益保全事項？
+□ 近年是否有調整費率或縮減保障？
+
+【C. 理賠難易度評比】
+□ 此保險公司理賠申訴率（請查金管會統計）
+□ 理賠申請需檢附哪些文件？流程難易？
+□ 消費者實際評價與常見被拒賠情形
+□ 金管會近年是否有裁罰紀錄？
+
+⚠️ 請標註「此為公開資料查詢結果」，個人核保除外條款須對照保單正本，
+停售商品若資料有限請標註「建議致電保險公司確認」。
+
+══════════════════════════════════════
+【第二部分】市場補強產品推薦
+══════════════════════════════════════
+
+投保人：${profile}
+${budgetLine}
+${priLine}
+
+保障完整度：${r.score||'—'} / 100 分
+保障摘要：${(r.summary||[]).join('；')}
+
+已確認缺口：
+${gaps_str}
+
+補強建議：
+${(r.recommendations||[]).map((x,i)=>`${i+1}. ${x}`).join('\n')}
+
+請搜尋並完成：
+1. 針對每個缺口，搜尋國泰、富邦、南山、新光、中國人壽、全球人壽、凱基人壽等主流公司目前仍在販售的對應商品
+2. 比較各商品保障範圍、理賠條件、等待期、除外責任、投保限制
+3. 比較各候選公司的理賠申訴率與消費者評價
+4. 依我的年齡、預算、家庭狀況，推薦 1~2 個最適合組合，說明推薦原因與每月新增保費估算${hasLTC?`
+5. 【長照專項】請重點搜尋：① 目前仍在販售的長期照護險與失能扶助險組合 ② 各商品的申請資格門檻（ADL 幾項、CDR 幾分）③ 注意：2024/7 起疾病失能險已全面停售，請確認商品是否仍有效販售 ④ 考量我已有保障（${existingTypes}），避免重複推薦`:''}${hasCancer?`
+6. 【癌症專項】請搜尋：① 重大傷病險（22 項 vs 36 項）目前市場主流商品 ② 癌症險與醫療實支實付的搭配建議 ③ 依據台灣十大癌症死因，評估我最需要補強哪種癌症相關保障`:''}
+7. 【避免重複】我目前已有：${existingTypes}，請勿重複推薦已有的保障類型，只針對缺口補強
+8. 每項資訊請附來源網址
+
+請以繁體中文回覆，結構清晰分段。`;
+
+  document.getElementById('dpBox').textContent=prompt;
+  document.getElementById('deepBlock').style.display='block';
+}
+
+function copyPrompt(){
+  const txt=document.getElementById('dpBox').textContent;
+  const ic=document.getElementById('copyIc');
+  const tx=document.getElementById('copyTx');
+  const btn=ic.closest('button');
+  navigator.clipboard.writeText(txt).then(()=>{
+    ic.textContent='✅';tx.textContent='已複製！';btn.classList.add('copied');
+    setTimeout(()=>{ic.textContent='📋';tx.textContent='複製 Deep Research Prompt';btn.classList.remove('copied');},2500);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    tx.textContent='已複製！';setTimeout(()=>{tx.textContent='複製 Deep Research Prompt';},2000);
+  });
+}
+
+// ── API Key ───────────────────────────────────────────────────────────────────
+const KKEY='ins_apikey_v3';
+function getKey(){return document.getElementById('apiKey').value.trim()||localStorage.getItem(KKEY)||'';}
+function onKeyInput(){
+  const v=document.getElementById('apiKey').value.trim();
+  const st=document.getElementById('kstat');const tx=document.getElementById('kstatTx');
+  if(!v){st.className='kstat';tx.textContent='尚未輸入';return;}
+  if(v.startsWith('sk-ant-')){st.className='kstat ok';tx.textContent='格式正確 ✓';}
+  else{st.className='kstat err';tx.textContent='格式有誤（應以 sk-ant- 開頭）';}
+}
+function saveKey(){
+  const v=document.getElementById('apiKey').value.trim();
+  if(!v){alert('請先輸入 API Key');return;}
+  localStorage.setItem(KKEY,v);
+  const st=document.getElementById('kstat');const tx=document.getElementById('kstatTx');
+  st.className='kstat sv';tx.textContent='已儲存於本機 ✓';
+  const sb=document.querySelector('.savebtn');sb.textContent='✅ 已儲存';
+  setTimeout(()=>{sb.textContent='💾 儲存本機';},2000);
+}
+function toggleEye(){
+  const inp=document.getElementById('apiKey');const eye=document.querySelector('.eye');
+  inp.type=inp.type==='password'?'text':'password';eye.textContent=inp.type==='password'?'👁':'🙈';
+}
+function loadSavedKey(){
+  const k=localStorage.getItem(KKEY);
+  if(!k)return;
+  document.getElementById('apiKey').value=k;
+  const st=document.getElementById('kstat');const tx=document.getElementById('kstatTx');
+  st.className='kstat sv';tx.textContent='已載入本機儲存的 Key ✓';
+}
+
+// ── Collapse helpers ──────────────────────────────────────────────────────────
+function togCard(bodyId,chevId){
+  const b=document.getElementById(bodyId);const c=document.getElementById(chevId);
+  const o=b.classList.toggle('open');c.classList.toggle('open',o);
+}
+function togTut(){
+  const b=document.getElementById('tutBody');
+  const c=document.getElementById('tutChev');
+  const o=b.classList.toggle('open');
+  c.classList.toggle('open',o);
+}
+function scrollToSceneA(){
+  const el=document.getElementById('sc-a');
+  if(el){
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    const body=document.getElementById('sc-a-body');
+    const chev=document.getElementById('sc-a-chev');
+    if(!body.classList.contains('open')){
+      body.classList.add('open');
+      chev.classList.add('open');
+      el.classList.add('open');
+    }
+  }
+}
+function togScene(id){
+  const body=document.getElementById('sc-'+id+'-body');
+  const chev=document.getElementById('sc-'+id+'-chev');
+  const card=document.getElementById('sc-'+id);
+  const o=body.classList.toggle('open');
+  chev.classList.toggle('open',o);
+  card.classList.toggle('open',o);
+}
+/* toggleGuide removed — guide moved to scenario A */
+function toggleSec(){
+  const b=document.getElementById('secBody');const c=document.getElementById('secChev');
+  const o=b.classList.toggle('open');c.classList.toggle('open',o);
+}
+
+// ── Sample ────────────────────────────────────────────────────────────────────
+function loadSample(){
+  document.getElementById('pAge').value='38';
+  document.getElementById('pGender').value='男性';
+  document.getElementById('pFamily').value='已婚有子女';
+  document.getElementById('pJob').value='內勤辦公室';
+  document.getElementById('pIncome').value='65000';
+  document.getElementById('pBudget').value='3000';
+  document.getElementById('pLoan').value='22000';
+  document.getElementById('pDep').value='2';
+  document.getElementById('pPri').value='重大疾病保障';
+  // open profile section
+  const pb=document.getElementById('profileBody');
+  if(!pb.classList.contains('open'))togCard('profileBody','profileChev');
+
+  document.getElementById('cIncome').value='780000';
+  document.getElementById('cExpense').value='480000';
+  document.getElementById('cLoan').value='4500000';
+  document.getElementById('cYears').value='20';
+  runCalc();
+  const cb=document.getElementById('calcBody');
+  if(!cb.classList.contains('open'))togCard('calcBody','calcChev');
+
+  document.getElementById('policyText').value=`【個人保險彙整清單】
+
+保戶姓名：王大明
+身份證字號：A123456789
+出生日期：1985年3月15日
+聯絡電話：0912-345-678
+
+═══════════════════════
+【保單一】終身壽險
+保險公司：國泰人壽
+投保日期：2019年6月1日
+身故保險金：300萬元 / 完全失能：300萬元
+繳費年期：20年期 / 每年保費：62,400元
+受益人：配偶 林美華
+
+═══════════════════════
+【保單二】醫療險（住院日額）
+保險公司：富邦人壽
+住院日額：1,500元/天 / 手術：最高15萬
+加護病房：3,000元/天 / 每年保費：8,200元
+
+═══════════════════════
+【保單三】意外險
+保險公司：新光人壽
+保障額度：200萬元 / 每年保費：3,600元
+
+═══════════════════════
+【健康告知】
+既往症：2018年輕微高血壓，服藥控制中
+家族病史：父親糖尿病、心臟病
+
+保費合計（年繳）：74,200元`;
+  switchPTab(2);
+}
+
+// ── Family members ───────────────────────────────────────────────────────────
+const AVATARS=['👤','👨','👩','👴','👵','👦','👧','👶','🧑','👨‍💼','👩‍💼'];
+let familyMembers=[{id:'self',name:'本人',avatar:'👤',results:null}];
+let activeMemberId='self';
+let selectedAvatar=AVATARS[0];
+
+function renderMemberTabs(){
+  const wrap=document.getElementById('memberTabs');
+  wrap.innerHTML='';
+  familyMembers.forEach(m=>{
+    const el=document.createElement('div');
+    el.className='fmember'+(m.id===activeMemberId?' active':'');
+    const score=m.results?`<span style="font-size:.68rem;margin-left:4px;opacity:.7">${m.results.score}分</span>`:'';
+    el.innerHTML=`<span class="fm-avatar">${m.avatar}</span>${m.name}${score}${m.id!=='self'?`<span class="fm-del" onclick="delMember(event,'${m.id}')">✕</span>`:''}`;
+    el.onclick=(e)=>{if(e.target.classList.contains('fm-del'))return;switchMember(m.id);};
+    wrap.appendChild(el);
+  });
+}
+
+function switchMember(id){
+  // save current step/data if on step3
+  const cur=familyMembers.find(m=>m.id===activeMemberId);
+  if(cur&&lastResult) cur.results=lastResult;
+  activeMemberId=id;
+  renderMemberTabs();
+  const target=familyMembers.find(m=>m.id===id);
+  if(target&&target.results){
+    // restore results
+    lastResult=target.results;
+    clearResultUI();
+    renderResult(target.results,'（已儲存結果）',MODELS.find(m=>m.id===selectedModel)?.name||selectedModel);
+    goStep(3);
+  }else{
+    // go to input for this member
+    lastResult=null;
+    policies=[];
+    renderPolicyList();
+    clearInputs();
+    goStep(1);
+  }
+}
+
+function clearResultUI(){
+  document.getElementById('summaryPts').innerHTML='';
+  document.getElementById('prosDiv').innerHTML='';
+  document.getElementById('consDiv').innerHTML='';
+  const gd=document.getElementById('gapDiv'); if(gd) gd.innerHTML='';
+  const pd=document.getElementById('policiesDiv'); if(pd) pd.innerHTML='';
+  const ud=document.getElementById('urgentDiv'); if(ud) ud.innerHTML='';
+  const oaw=document.getElementById('overallAdviceWrap'); if(oaw) oaw.style.display='none';
+  document.getElementById('recsDiv').innerHTML='';
+  document.getElementById('privNote').textContent='';
+  document.getElementById('dashBoxes').innerHTML='';
+  document.getElementById('tlDiv').innerHTML='';
+  document.getElementById('claimResults').innerHTML='';
+  document.getElementById('claimNote').textContent='';
+  document.getElementById('rawOut').textContent='';
+  const pieCtx=document.getElementById('pieChart').getContext('2d');
+  pieCtx.clearRect(0,0,260,260);
+}
+
+function openAddMember(){
+  // build avatar picker
+  const pick=document.getElementById('fmAvatarPick');
+  pick.innerHTML='';
+  selectedAvatar=AVATARS[0];
+  AVATARS.forEach(a=>{
+    const el=document.createElement('div');
+    el.className='av-opt'+(a===selectedAvatar?' sel':'');
+    el.textContent=a;
+    el.onclick=()=>{document.querySelectorAll('.av-opt').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selectedAvatar=a;};
+    pick.appendChild(el);
+  });
+  document.getElementById('fmName').value='';
+  document.getElementById('fmOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fmName').focus(),100);
+}
+
+function confirmAddMember(){
+  const name=document.getElementById('fmName').value.trim();
+  if(!name){alert('請輸入成員名稱');return;}
+  const id='m_'+Date.now();
+  familyMembers.push({id,name,avatar:selectedAvatar,results:null});
+  closeFMModalDirect();
+  renderMemberTabs();
+  switchMember(id);
+}
+
+function delMember(e,id){
+  e.stopPropagation();
+  if(!confirm('確定移除此成員及其分析結果？'))return;
+  familyMembers=familyMembers.filter(m=>m.id!==id);
+  if(activeMemberId===id){activeMemberId='self';switchMember('self');}
+  renderMemberTabs();
+}
+
+function closeFMModal(e){if(e.target===document.getElementById('fmOverlay'))closeFMModalDirect();}
+function closeFMModalDirect(){document.getElementById('fmOverlay').classList.remove('open');}
+
+// Save result to current member automatically
+const _origRenderResult=window.renderResult||null;
+
+// ── Export ────────────────────────────────────────────────────────────────────
+let expMode='print';
+function openExpModal(){
+  if(!lastResult){alert('請先完成 AI 分析再匯出');return;}
+  document.getElementById('expOverlay').classList.add('open');
+}
+function closeExpModal(e){if(e.target===document.getElementById('expOverlay'))closeExpModalDirect();}
+function closeExpModalDirect(){document.getElementById('expOverlay').classList.remove('open');}
+function selExp(mode){
+  expMode=mode;
+  ['print','copy','html'].forEach(m=>{
+    document.getElementById('expOpt'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('sel',m===mode);
+  });
+}
+
+function buildReportText(r){
+  const cur=familyMembers.find(m=>m.id===activeMemberId);
+  const memberName=cur?(cur.avatar+' '+cur.name):'本人';
+  const age=document.getElementById('pAge').value;
+  const gender=document.getElementById('pGender').value;
+  const now=new Date().toLocaleDateString('zh-TW');
+  const NL='\n';
+  const SEP='═'.repeat(50);
+  const lines=[
+    '保單智能分析報告',
+    '分析對象：'+memberName+(age?'  年齡：'+age+'歲':'')+(gender?'  性別：'+gender:''),
+    '分析日期：'+now,
+    SEP,'',
+    '保障完整度評分：'+(r.score||0)+' / 100 分',
+    r.scoreDesc||'','',
+    '【保障摘要】',
+    (r.keyPoints||r.summary||[]).map(function(s){return '• '+s;}).join(NL),'',
+    '【保障優點】',
+    (r.pros||[]).map(function(p){return '✓ '+(typeof p==='object'?p.title:p);}).join(NL),'',
+    '【保障缺口】',
+    (r.gaps||[]).map(function(g){return '• '+(g.type||g)+'：'+(g.headline||g.reason||'');}).join(NL),'',
+    '【補強建議】',
+    (r.recommendations||[]).map(function(rec,i){return (i+1)+'. '+(typeof rec==='object'?rec.title:rec);}).join(NL),'',
+    SEP,
+    '【Deep Research Prompt — 貼至 Claude.ai 深度研究模式使用】','',
+    (document.getElementById('dpBox')?document.getElementById('dpBox').textContent:''),'',
+    SEP,
+    '本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理。',
+    '實際理賠依各保單條款為準，建議諮詢合格保險顧問。'
+  ];
+  return lines.join(NL);
+}
+
+function buildReportHTML(r){
+  const cur=familyMembers.find(m=>m.id===activeMemberId);
+  const memberName=cur?(cur.avatar+' '+cur.name):'本人';
+  const age=document.getElementById('pAge').value;
+  const gender=document.getElementById('pGender').value;
+  const now=new Date().toLocaleDateString('zh-TW');
+  const score=r.score||0;
+  const scoreColor=score>=70?'#27ae60':score>=40?'#c8a96e':'#c0392b';
+  const metaStr='分析對象：'+memberName+(age?'　年齡：'+age+'歲':'')+(gender?'　性別：'+gender:'')+'　分析日期：'+now;
+  const prosHtml=(r.pros||[]).map(function(p){var t=typeof p==='object'?p.title:p;return '<span class="tag-pro">✓ '+t+'</span>';}).join('');
+  const consHtml=(r.cons||[]).map(function(c){var t=typeof c==='object'?c.headline||c.type:c;return '<span class="tag-con">✗ '+t+'</span>';}).join('');
+  const recsHtml=(r.recommendations||[]).map(function(rec){var t=typeof rec==='object'?rec.title:rec;return '<li>→ '+t+'</li>';}).join('');
+  const sumHtml=(r.keyPoints||r.summary||[]).map(function(s){return '<p style="font-size:.9rem;margin-bottom:6px;line-height:1.6">◆ '+s+'</p>';}).join('');
+  const dpText=document.getElementById('dpBox')?document.getElementById('dpBox').textContent.replace(/</g,'&lt;').replace(/>/g,'&gt;'):'';
+  const style=[
+    'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;max-width:820px;margin:0 auto;padding:32px 28px 60px;color:#1a1a2e;background:#f5f0e8;}',
+    'h1{font-size:1.4rem;color:#c8a96e;margin-bottom:4px;}',
+    '.meta{font-size:.85rem;color:#7a7060;margin-bottom:20px;}',
+    '.score-box{display:inline-flex;align-items:center;gap:16px;padding:16px 24px;background:#fefcf7;border:2px solid '+scoreColor+';border-radius:10px;margin-bottom:20px;}',
+    '.score-num{font-size:2.2rem;font-weight:700;color:'+scoreColor+';}',
+    '.score-desc{font-size:.88rem;color:#5a5448;max-width:280px;line-height:1.6;}',
+    'h2{font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7060;border-bottom:1px solid #d4c9b0;padding-bottom:5px;margin:20px 0 10px;}',
+    '.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}',
+    '.tag-pro{padding:5px 12px;border-radius:18px;font-size:.8rem;background:rgba(39,174,96,.11);color:#1a7a44;}',
+    '.tag-con{padding:5px 12px;border-radius:18px;font-size:.8rem;background:rgba(192,57,43,.11);color:#952020;}',
+    '.rec-list{list-style:none;padding:0;}',
+    '.rec-list li{padding:8px 13px;border-left:3px solid #c8a96e;background:rgba(200,169,110,.07);margin-bottom:6px;border-radius:0 5px 5px 0;font-size:.85rem;line-height:1.6;}',
+    '.deep-box{background:#fff;border:1px solid rgba(44,62,122,.2);border-radius:8px;padding:14px;font-size:.8rem;line-height:1.8;white-space:pre-wrap;word-break:break-word;margin-top:8px;}',
+    '.footer{font-size:.78rem;color:#a09880;margin-top:32px;padding-top:12px;border-top:1px solid #d4c9b0;line-height:1.7;}'
+  ].join('\n');
+  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>保單分析報告</title><style>'+style+'</style></head><body>'
+    +'<h1>🛡️ 保單智能分析報告</h1>'
+    +'<div class="meta">'+metaStr+'</div>'
+    +'<div class="score-box"><div class="score-num">'+score+'<small style="font-size:1rem;color:#7a7060">/100</small></div><div class="score-desc">'+(r.scoreDesc||'')+'</div></div>'
+    +'<h2>保障摘要</h2>'+sumHtml
+    +'<h2>保障優點</h2><div class="tags">'+prosHtml+'</div>'
+    +'<h2>保障不足</h2><div class="tags">'+consHtml+'</div>'
+    +'<h2>補強建議</h2><ul class="rec-list">'+recsHtml+'</ul>'
+    +'<h2>Deep Research Prompt（貼至 Claude.ai 深度研究模式）</h2>'
+    +'<div class="deep-box">'+dpText+'</div>'
+    +'<div class="footer">本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理。<br>實際理賠依各保單條款為準，建議諮詢合格保險顧問。</div>'
+    +'</body></html>';
+}
+
+function doExport(){
+  if(!lastResult){closeExpModalDirect();return;}
+  closeExpModalDirect();
+  if(expMode==='print'){
+    const html=buildReportHTML(lastResult);
+    const win=window.open('','_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(()=>win.print(),600);
+  }else if(expMode==='copy'){
+    const txt=buildReportText(lastResult);
+    navigator.clipboard.writeText(txt).then(()=>alert('✅ 報告已複製到剪貼簿，可貼至 Word 或 Line。')).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      alert('✅ 報告已複製到剪貼簿。');
+    });
+  }else if(expMode==='html'){
+    const html=buildReportHTML(lastResult);
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');
+    const cur=familyMembers.find(m=>m.id===activeMemberId);
+    a.download=`保單分析報告_${cur?.name||'本人'}_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.html`;
+    a.href=URL.createObjectURL(blob);a.click();URL.revokeObjectURL(a.href);
+  }
+}
+
+
+// ── Knowledge panel toggles ───────────────────────────────────────────────────
+function togKP(id){
+  const b=document.getElementById(id+'-body');
+  const c=document.getElementById(id+'-chev');
+  const o=b.classList.toggle('open');
+  c.classList.toggle('open',o);
+}
+function togCancer(id){
+  const d=document.getElementById('cd-'+id);
+  d.classList.toggle('open');
+}
+
+// ── Cancer data (2024 衛福部資料) ─────────────────────────────────────────────
+const CANCERS=[
+  {rank:1,name:'肺癌',deaths:'10,495人',risk:'吸菸、空污、氡氣、家族史',ins:[
+    {t:'重大傷病險',c:'must',note:'取得健保重大傷病卡即可申請一次金，肺癌治療費用極高'},
+    {t:'醫療實支實付',c:'must',note:'靶向藥物費用每月可達 10~30 萬，實支實付最關鍵'},
+    {t:'癌症險',c:'rec',note:'提供住院、手術、化療、放療各項給付'},
+    {t:'失能扶助險',c:'opt',note:'晚期肺癌可能導致失能，有此保障更完整'}
+  ],tip:'肺癌標靶藥物費用昂貴，實支實付的「雜費限額」要夠高（建議 100 萬以上），否則自費缺口仍大。'},
+  {rank:2,name:'肝癌',deaths:'8,124人',risk:'B/C 型肝炎、酒精、脂肪肝',ins:[
+    {t:'重大傷病險',c:'must',note:'肝癌符合重大傷病，一次給付可用於手術或換肝費用'},
+    {t:'醫療實支實付',c:'must',note:'肝臟手術費用高，加護病房費用也高'},
+    {t:'癌症險',c:'rec',note:'提供化療、標靶治療期間的補貼'},
+    {t:'壽險',c:'opt',note:'肝癌存活率較低，壽險保障家人'}
+  ],tip:'有 B 型或 C 型肝炎帶原者，投保時需誠實告知，可能被附加除外條款；建議定期追蹤並保留紀錄。'},
+  {rank:3,name:'大腸直腸癌',deaths:'7,234人',risk:'紅肉、加工食品、缺乏運動、家族史',ins:[
+    {t:'重大傷病險',c:'must',note:'確診即可申請一次金'},
+    {t:'醫療實支實付',c:'must',note:'手術、化療、標靶治療費用'},
+    {t:'癌症險',c:'rec',note:'人工肛門裝置、後續追蹤費用補貼'},
+    {t:'長期照護險',c:'opt',note:'術後可能影響生活自理能力'}
+  ],tip:'大腸鏡篩檢是最有效的早期發現方式，50 歲以上每 5~10 年一次；政府有補助。'},
+  {rank:4,name:'乳癌（女性）',deaths:'2,955人',risk:'家族史、BRCA 基因、晚育、肥胖',ins:[
+    {t:'重大傷病險',c:'must',note:'化療、標靶藥物（如 HER2 標靶）費用極高'},
+    {t:'醫療實支實付',c:'must',note:'手術重建、化療、放療費用'},
+    {t:'癌症險',c:'rec',note:'停藥期間生活費補貼'},
+    {t:'失能扶助險',c:'opt',note:'治療期間可能暫時無法工作'}
+  ],tip:'乳癌好發年齡比其他癌症年輕，建議女性 30 歲起就確保有完整的重大傷病保障。'},
+  {rank:5,name:'攝護腺癌（男性）',deaths:'2,285人',risk:'年齡（主要在 70 歲以上）、家族史',ins:[
+    {t:'重大傷病險',c:'must',note:'荷爾蒙療法、手術費用'},
+    {t:'醫療實支實付',c:'rec',note:'手術及後續追蹤費用'},
+    {t:'長期照護險',c:'rec',note:'攝護腺癌病程長，晚期可能影響行動'}
+  ],tip:'標準化死亡率近年上升，主要因人口老化。50 歲以上男性建議定期 PSA 檢查。'},
+  {rank:6,name:'口腔癌',deaths:'2,253人',risk:'嚼檳榔、吸菸、飲酒（三者並用風險極高）',ins:[
+    {t:'重大傷病險',c:'must',note:'手術範圍大，重建手術費用高'},
+    {t:'醫療實支實付',c:'must',note:'口腔重建、語言復健費用'},
+    {t:'失能扶助險',c:'rec',note:'可能影響說話、咀嚼等功能'},
+    {t:'壽險',c:'rec',note:'口腔癌死亡年齡中位數僅 63 歲，較年輕'}
+  ],tip:'口腔癌死亡年齡中位數 63 歲，屬相對年輕的癌症，30~50 歲就要確保保障足夠。'},
+  {rank:7,name:'胰臟癌',deaths:'2,234人',risk:'吸菸、糖尿病、慢性胰臟炎、家族史',ins:[
+    {t:'重大傷病險',c:'must',note:'胰臟癌存活率極低（5年存活率約 10%），壽險與重大傷病缺一不可'},
+    {t:'醫療實支實付',c:'must',note:'化療費用高'},
+    {t:'壽險',c:'must',note:'胰臟癌為預後最差的癌症之一，壽險保障家人生活'}
+  ],tip:'胰臟癌早期幾乎無症狀，確診時多已晚期，壽險與重大傷病險是首要保障。'},
+  {rank:8,name:'胃癌',deaths:'2,034人',risk:'幽門螺旋桿菌、醃漬食品、吸菸',ins:[
+    {t:'重大傷病險',c:'must',note:'胃部手術費用高'},
+    {t:'醫療實支實付',c:'must',note:'手術、化療費用'},
+    {t:'癌症險',c:'rec',note:'術後長期追蹤補貼'}
+  ],tip:'幽門螺旋桿菌感染是主要風險因子，可透過檢測和治療降低風險；胃癌死亡率近年有明顯下降。'},
+  {rank:9,name:'食道癌',deaths:'1,847人',risk:'長期抽菸、飲酒、嚼檳榔、胃食道逆流',ins:[
+    {t:'重大傷病險',c:'must',note:'食道手術為大手術，費用高'},
+    {t:'醫療實支實付',c:'must',note:'術後可能需要鼻胃管、長期追蹤'},
+    {t:'失能扶助險',c:'rec',note:'可能影響進食與日常生活'}
+  ],tip:'食道癌死亡年齡中位數僅 63 歲，且術後生活品質影響大，失能保障不可忽略。'},
+  {rank:10,name:'卵巢癌（女性）',deaths:'1,167人',risk:'家族史（BRCA1/2）、未生育、荷爾蒙療法',ins:[
+    {t:'重大傷病險',c:'must',note:'化療費用高，療程長'},
+    {t:'醫療實支實付',c:'must',note:'手術、化療費用'},
+    {t:'長期照護險',c:'opt',note:'晚期可能影響生活自理'}
+  ],tip:'卵巢癌缺乏有效篩檢方式，死亡率近年上升，有家族史者應告知婦產科醫師並加強保障。'}
+];
+
+function buildCancerGrid(){
+  const g=document.getElementById('cancerGrid');
+  if(!g)return;
+  g.innerHTML='';
+  CANCERS.forEach((c,i)=>{
+    const insHtml=c.ins.map(ins=>`<span class="ins-tag ${ins.c}">${ins.t}</span>`).join('');
+    const insDetail=c.ins.map(ins=>`<div style="margin-bottom:6px"><span class="ins-tag ${ins.c}">${ins.t}</span><span style="font-size:.8rem;color:var(--muted);margin-left:6px">${ins.note}</span></div>`).join('');
+    g.innerHTML+=`<div class="cancer-card">
+      <div class="cancer-head" onclick="togCancer(${i})">
+        <div class="cancer-rank ${i<3?'top3':''}">${c.rank}</div>
+        <div class="cancer-name">${c.name}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${c.deaths}</div>
+        <span style="margin-left:6px;font-size:.75rem;color:var(--muted)">▼</span>
+      </div>
+      <div class="cancer-detail" id="cd-${i}">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:7px">⚠️ 主要風險因子：${c.risk}</div>
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:6px;color:var(--ink)">建議保障配置：</div>
+        ${insDetail}
+        <div style="margin-top:8px;padding:8px 10px;background:rgba(200,169,110,.08);border-radius:6px;font-size:.8rem;color:#4a4840;line-height:1.7">💡 ${c.tip}</div>
+      </div>
+    </div>`;
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', function(){
+    buildModels(); loadSavedKey(); renderMemberTabs(); buildCancerGrid();
+  });
+} else {
+  buildModels(); loadSavedKey(); renderMemberTabs(); buildCancerGrid();
+}
+</script>
+</body>
+</html>
