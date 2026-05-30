@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v14</title>
+<title>保單智能分析系統 v15</title>
 <style>
 /* Google Fonts removed for local file compatibility */
 :root{
@@ -400,7 +400,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Deep Research 補強</p></div>
-  <span class="hbadge">v14 隱私優先</span>
+  <span class="hbadge">v15 隱私優先</span>
 </header>
 <main>
 
@@ -1814,12 +1814,31 @@ ${masked}`;
   const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:selectedModel,max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:selectedModel,max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
   const data=await resp.json();
   const txt=data.content.map(b=>b.text||'').join('');
-  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  const cleaned=txt.replace(/```json|```/g,'').trim();
+  try{
+    return JSON.parse(cleaned);
+  }catch(e){
+    // Try to fix truncated JSON by finding last complete object
+    const fixed=cleaned
+      .replace(/,\s*$/, '')           // remove trailing comma
+      .replace(/,\s*}$/, '}')         // fix trailing comma before }
+      .replace(/,\s*]$/, ']');        // fix trailing comma before ]
+    // Try to close unclosed structures
+    let attempt=fixed;
+    const opens=(attempt.match(/\{/g)||[]).length;
+    const closes=(attempt.match(/\}/g)||[]).length;
+    for(let i=0;i<opens-closes;i++) attempt+='"}';
+    try{
+      return JSON.parse(attempt);
+    }catch(e2){
+      throw new Error('AI 回傳格式錯誤，請重試。若持續發生，請換用 Opus 4.6 模型。（'+e.message+')');
+    }
+  }
 }
 
 // ── Render result ─────────────────────────────────────────────────────────────
