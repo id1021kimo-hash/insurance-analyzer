@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v15</title>
+<title>保單智能分析系統 v16</title>
 <style>
 /* Google Fonts removed for local file compatibility */
 :root{
@@ -400,7 +400,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Deep Research 補強</p></div>
-  <span class="hbadge">v15 隱私優先</span>
+  <span class="hbadge">v16 隱私優先</span>
 </header>
 <main>
 
@@ -1705,6 +1705,14 @@ async function goStep3(){
     lastResult=r;
     renderResult(r,masked,mname);
   }catch(e){
+    // If JSON truncation, auto-retry with minimal prompt
+    if(e.message&&e.message.includes('AI 回傳格式錯誤')){
+      try{
+        return await callAPIMinimal(masked);
+      }catch(e2){
+        e.message=e2.message||e.message;
+      }
+    }
     const msg=e.message||'';
     const isCORS=(msg.toLowerCase().includes('fetch')||msg.toLowerCase().includes('cors')||msg.toLowerCase().includes('network')||msg==='Failed to fetch'||msg.includes('NetworkError'));
     const isKey=(msg.includes('401')||msg.toLowerCase().includes('authentication')||msg.toLowerCase().includes('api key')||msg.toLowerCase().includes('invalid x-api-key'));
@@ -1782,29 +1790,8 @@ async function goStep3(){
 async function callAPI(masked){
   const key=getKey();
   if(!key)throw new Error('請先輸入 API Key');
-  const prompt=`你是一位親切專業的台灣保險顧問，請用口語化的繁體中文分析以下保單（個資已遮蔽，忽略 █ 符號）。
-
-語言要求：
-- 像家庭醫師解釋報告，簡單易懂，不用保險術語
-- 數字要具體（不說「保額不足」，要說「萬一住院30天目前只夠賠約X萬，可能還差Y萬」）
-- 建議要有行動步驟（說清楚第一步是什麼）
-- 70歲以上長輩也能看懂
-
-只回覆 JSON，不加任何 markdown 或說明文字：
-{
-  "score":<0-100保障完整度>,
-  "scoreDesc":"<一句口語說明，例：您的保障像是有安全帽但還沒安全氣囊>",
-  "urgent":"<最緊急要處理的一件事，一句話，直接說行動>",
-  "keyPoints":["<重點1，15字內>","<重點2，15字內>","<重點3，15字內>"],
-  "pros":[{"title":"<優點標題>","detail":"<2-3句具體說明這個保障保了什麼、能賠多少>"}],
-  "gaps":[{"type":"<缺口名稱>","severity":"high|medium|low","headline":"<一句話說這個缺口的影響>","detail":"<具體說明萬一發生什麼事會差多少錢>","action":"<具體下一步行動>"}],
-  "existingPolicies":[{"company":"<公司>","product":"<商品名>","type":"<險種>","amount":"<保額>","since":"<生效年>","premium":"<年保費>","oneLineSummary":"<一句話說這張保單保了什麼>"}],
-  "recommendations":[{"title":"<建議標題>","priority":"urgent|soon|optional","reason":"<為什麼要做>","action":"<具體怎麼做，第一步是什麼>","estimatedCost":"<大概每月多少錢>"}],
-  "dashData":{"totalPremium":<年繳總保費數字>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},
-  "timeline":[{"name":"<保單名>","since":"<生效年>","years":<繳費年期>,"endYear":<繳費終止年>}],
-  "overallAdvice":"<3-5句整體建議，口語說明現在最重要的事和不用擔心的事>",
-  "privacyNote":"<說明哪些個資已遮蔽>"
-}
+  const prompt=`你是台灣保險顧問，用口語繁體中文分析以下保單（個資已遮蔽，忽略 █）。只回覆JSON，不加markdown：
+{"score":<0-100>,"scoreDesc":"<一句話>","urgent":"<最緊急一件事>","keyPoints":["<重點1>","<重點2>","<重點3>"],"pros":[{"title":"<優點>","detail":"<說明>"}],"gaps":[{"type":"<缺口>","severity":"high|medium|low","headline":"<影響>","detail":"<具體說明>","action":"<下一步>"}],"existingPolicies":[{"company":"<公司>","product":"<商品>","type":"<險種>","amount":"<保額>","since":"<生效年>","premium":"<保費>","oneLineSummary":"<一句話>"}],"recommendations":[{"title":"<建議>","priority":"urgent|soon|optional","reason":"<原因>","action":"<做法>","estimatedCost":"<月費>"}],"dashData":{"totalPremium":<年保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},"timeline":[{"name":"<保單>","since":"<年>","years":<繳費年>,"endYear":<終止年>}],"overallAdvice":"<整體建議3句>","privacyNote":"<遮蔽說明>"}
 
 保單內容：
 ${masked}`;
@@ -1814,7 +1801,7 @@ ${masked}`;
   const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:selectedModel,max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:selectedModel,max_tokens:6000,messages:[{role:'user',content:prompt}]})
   });
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
   const data=await resp.json();
@@ -2485,6 +2472,31 @@ function selExp(mode){
   ['print','copy','html'].forEach(m=>{
     document.getElementById('expOpt'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('sel',m===mode);
   });
+}
+
+async function callAPIMinimal(masked){
+  const key=getKey();
+  const proxy=getProxy();
+  const endpoint=proxy||'https://api.anthropic.com/v1/messages';
+  const parts=[
+    '你是台灣保險顧問。分析以下保單，只回覆JSON不加其他文字。',
+    '格式：{"score":0,"scoreDesc":"","urgent":"","keyPoints":["","",""]',
+    ',"pros":[{"title":"","detail":""}],"gaps":[{"type":"","severity":"high","headline":"","detail":"","action":""}]',
+    ',"recommendations":[{"title":"","priority":"urgent","reason":"","action":"","estimatedCost":""}]',
+    ',"overallAdvice":"","existingPolicies":[{"company":"","product":"","type":"","amount":"","oneLineSummary":""}]',
+    ',"dashData":{"totalPremium":0,"byType":{"壽險":0,"醫療險":0,"意外險":0,"其他":0}},"timeline":[],"privacyNote":""}'+'\n保單：'+masked.substring(0,2000)
+  ];
+  const minPrompt=parts.join('');
+  const resp=await fetch(endpoint,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:selectedModel,max_tokens:3000,messages:[{role:'user',content:minPrompt}]})
+  });
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
+  const data=await resp.json();
+  const txt=data.content.map(function(b){return b.text||'';}).join('');
+  const cleaned=txt.replace(/```json|```/g,'').trim();
+  return JSON.parse(cleaned);
 }
 
 function buildReportText(r){
