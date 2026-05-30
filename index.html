@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v13</title>
+<title>保單智能分析系統 v14</title>
 <style>
 /* Google Fonts removed for local file compatibility */
 :root{
@@ -88,6 +88,10 @@ main{max-width:1120px;margin:0 auto;padding:24px 18px 80px;}
 .kstat.err .kd{background:var(--danger);}.kstat.err{color:#e08080;}
 .kstat.sv .kd{background:var(--accent);}.kstat.sv{color:var(--accent);}
 .key-note{font-size:.84rem;color:#c8c0a8;line-height:1.75;margin-top:10px;}
+  .proxy-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);}
+  .proxy-status{font-size:.78rem;margin-top:5px;min-height:16px;color:#c8c0a8;}
+  .proxy-status.ok{color:#6ec98a;}
+  .proxy-status.warn{color:#f0c870;}
 .key-note a{color:#f0c870;text-decoration:underline;font-weight:600;}
 .key-note a:hover{text-decoration:underline;}
 .savebtn{display:inline-flex;align-items:center;gap:4px;padding:9px 15px;background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.28);border-radius:6px;font-size:.86rem;color:var(--accent);cursor:pointer;transition:all .2s;white-space:nowrap;align-self:flex-end;}
@@ -396,7 +400,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Deep Research 補強</p></div>
-  <span class="hbadge">v13 隱私優先</span>
+  <span class="hbadge">v14 隱私優先</span>
 </header>
 <main>
 
@@ -625,6 +629,58 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 
         <div class="tut-step">
           <div class="tut-num">8</div>
+          <div class="tut-content">
+            <div class="tut-title">設定 Cloudflare Proxy（GitHub Pages 用戶必做）</div>
+            <div class="tut-desc">
+              從 GitHub Pages 開啟工具時，必須設定 Cloudflare Proxy 才能呼叫 AI 分析。<br><br>
+              ① 前往 <a href="https://cloudflare.com" target="_blank">cloudflare.com</a> 免費註冊帳號<br>
+              ② 登入後點左側「<strong>Workers &amp; Pages</strong>」→「<strong>Create</strong>」→「<strong>Create Worker</strong>」<br>
+              ③ 名稱填 <strong>insurance-proxy</strong> → 點「<strong>Deploy</strong>」<br>
+              ④ 點「<strong>Edit code</strong>」，全選刪除，貼上以下程式碼：
+            </div>
+            <div style="background:var(--ink);border-radius:8px;padding:12px 14px;margin:8px 0;font-family:monospace;font-size:.78rem;color:#e8e0d0;line-height:1.7;overflow-x:auto;white-space:pre">export default {
+  async fetch(request) {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version',
+        }
+      });
+    }
+    const body = await request.text();
+    const apiKey = request.headers.get('x-api-key');
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: body,
+    });
+    const data = await resp.text();
+    return new Response(data, {
+      status: resp.status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
+  }
+};</div>
+            <div class="tut-desc">
+              ⑤ 點右上角「<strong>Deploy</strong>」，複製顯示的 Worker 網址<br>
+              　　格式：<code>https://insurance-proxy.你的帳號.workers.dev</code><br>
+              ⑥ 回到工具 Step 1，在「<strong>Cloudflare Proxy 網址</strong>」欄位貼上並點「💾 儲存」
+            </div>
+            <div class="tut-tip">☁️ Cloudflare Workers 免費方案每天可呼叫 10 萬次，個人使用完全夠用</div>
+          </div>
+        </div>
+
+        <div class="tut-step">
+          <div class="tut-num">9</div>
           <div class="tut-content">
             <div class="tut-title">匯出報告 / 新增家庭成員（選用）</div>
             <div class="tut-desc">
@@ -921,6 +977,32 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
     </div>
 
     <div class="key-note">🔒 Key 僅儲存於您的瀏覽器本機，不會傳送至任何伺服器。此費用與 Claude.ai 的訂閱費用<strong style="color:#e8e0d0">完全獨立</strong>，互不影響。</div>
+
+    <!-- Proxy URL -->
+    <div class="proxy-row">
+      <div class="key-field" style="flex:1;min-width:220px">
+        <label style="color:#a09880;font-size:.78rem;font-weight:600;display:block;margin-bottom:5px">
+          🔀 Cloudflare Proxy 網址
+          <span style="font-size:.7rem;color:#6a6a8a;font-weight:400;margin-left:4px">（GitHub Pages 必填，本機可不填）</span>
+        </label>
+        <div class="key-wrap">
+          <input type="text" id="proxyUrl" placeholder="https://insurance-proxy.你的帳號.workers.dev"
+            oninput="onProxyInput()" autocomplete="off" spellcheck="false"
+            style="font-size:.82rem;letter-spacing:0">
+        </div>
+        <div class="proxy-status" id="proxyStatus">尚未設定（從 GitHub Pages 使用時需要填寫）</div>
+      </div>
+      <div class="savebtn" onclick="saveProxy()" style="align-self:flex-start;margin-top:22px">💾 儲存</div>
+    </div>
+
+    <div style="margin-top:10px;padding:10px 13px;background:rgba(44,62,122,.15);border:1px solid rgba(44,62,122,.3);border-radius:8px;font-size:.82rem;color:#a8b8d8;line-height:1.75">
+      📖 <strong style="color:#c8d8f0">還沒有 Proxy？</strong>
+      免費申請流程：前往 <a href="https://cloudflare.com" target="_blank" style="color:#f0c870;text-decoration:underline">cloudflare.com</a> 註冊
+      → 左側「Workers &amp; Pages」→「Create Worker」
+      → 貼上系統提供的程式碼 → Deploy
+      → 複製 Worker 網址填入上方
+      <br><span style="color:#8898aa;font-size:.78rem">（工具內有完整步驟說明，見使用教學）</span>
+    </div>
   </div>
 
   <!-- Model -->
@@ -1629,30 +1711,42 @@ async function goStep3(){
     const isBalance=(msg.includes('402')||msg.toLowerCase().includes('credit')||msg.toLowerCase().includes('balance'));
     let html='';
     if(isCORS){
-      html='<div style="padding:20px 24px">'
+      const isGHPages=location.hostname.includes('github.io');
+    const isFile=location.protocol==='file:';
+    const corsSubMsg=isGHPages
+      ?'您使用 GitHub Pages 開啟工具，需要設定 Cloudflare Proxy 才能呼叫 API'
+      :isFile?'直接用 file:// 開啟 HTML 檔案時，瀏覽器會封鎖對外部 API 的連線'
+      :'API 連線被封鎖，請依下方說明解決';
+    html='<div style="padding:20px 24px">'
         +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
         +'<span style="font-size:1.5rem">🚫</span>'
         +'<div><div style="font-size:1rem;font-weight:700;color:var(--danger)">CORS 錯誤：瀏覽器封鎖了 API 請求</div>'
-        +'<div style="font-size:.85rem;color:var(--muted);margin-top:2px">直接用 file:// 開啟 HTML 檔案時，瀏覽器會封鎖對外部 API 的連線</div></div></div>'
+        +'<div style="font-size:.85rem;color:var(--muted);margin-top:2px">'+corsSubMsg+'</div></div></div>'
         +'<div style="background:#f9f6f0;border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px">'
         +'<div style="font-size:.82rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">解決方法（三選一）</div>'
         +'<div style="display:flex;flex-direction:column;gap:10px">'
 
-        +'<div style="border:2px solid var(--accent);border-radius:9px;padding:12px 15px;background:rgba(200,169,110,.04)">'
-        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">⭐ 方法一：Python 本機伺服器（最推薦）</div>'
+        +(isGHPages?
+          '<div style="border:2px solid var(--accent);border-radius:9px;padding:12px 15px;background:rgba(200,169,110,.04)">'
+          +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">⭐ 方法一：設定 Cloudflare Proxy（GitHub Pages 必用）</div>'
+          +'<div style="font-size:.85rem;color:var(--muted);line-height:1.8">'
+          +'① 前往 <a href="https://cloudflare.com" target="_blank" style="color:var(--deep);font-weight:600">cloudflare.com</a> 免費註冊<br>'
+          +'② 左側「Workers &amp; Pages」→「Create Worker」→ 名稱填 <strong>insurance-proxy</strong> → Deploy<br>'
+          +'③ 點「Edit code」貼上 Proxy 程式碼（見使用教學）→ 右上角「Deploy」<br>'
+          +'④ 複製 Worker 網址（格式：<code style="background:rgba(26,26,46,.07);padding:1px 5px;border-radius:3px">https://insurance-proxy.你的帳號.workers.dev</code>）<br>'
+          +'⑤ 回到工具 Step 1，填入「Cloudflare Proxy 網址」欄位並儲存 → 重新分析</div></div>'
+        :'')
+
+        +'<div style="border:'+(isGHPages?'1px solid var(--border)':'2px solid var(--accent)')+';border-radius:9px;padding:12px 15px;'+(isGHPages?'':'background:rgba(200,169,110,.04)')+'">'
+        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">'+(isGHPages?'🔧 方法二':'⭐ 方法一')+'：Python 本機伺服器</div>'
         +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">不需安裝任何軟體，macOS/Linux/Windows 10+ 都有內建 Python。<br>'
         +'① 在 HTML 檔案的資料夾開「終端機」或「命令提示字元」<br>'
-        +'② 輸入以下指令後按 Enter：<br>'
-        +'<code style="display:inline-block;margin:6px 0;padding:6px 12px;background:var(--ink);color:var(--accent);border-radius:6px;font-size:.88rem;letter-spacing:.02em">python -m http.server 8080</code><br>'
-        +'③ 瀏覽器開啟：<code style="background:rgba(44,62,122,.1);padding:2px 7px;border-radius:4px;color:var(--deep)">http://localhost:8080/insurance-analyzer.html</code></div></div>'
+        +'② 輸入：<code style="display:inline-block;margin:4px 0;padding:5px 10px;background:var(--ink);color:var(--accent);border-radius:6px;font-size:.85rem">python -m http.server 8080</code><br>'
+        +'③ 瀏覽器開啟：<code style="background:rgba(44,62,122,.1);padding:2px 6px;border-radius:4px;color:var(--deep)">http://localhost:8080/index.html</code></div></div>'
 
         +'<div style="border:1px solid var(--border);border-radius:9px;padding:12px 15px">'
-        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">🔧 方法二：VS Code + Live Server</div>'
-        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">安裝 <a href="https://code.visualstudio.com" target="_blank" style="color:var(--deep);font-weight:600">VS Code</a> → 安裝擴充套件「Live Server」→ 右鍵 HTML 檔案點「Open with Live Server」</div></div>'
-
-        +'<div style="border:1px solid var(--border);border-radius:9px;padding:12px 15px">'
-        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">💬 方法三：直接在 Claude.ai 使用</div>'
-        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">不需下載檔案，直接在 Claude.ai 對話中使用 Artifact 版本，沒有 CORS 問題。適合只需要偶爾分析的使用者。</div></div>'
+        +'<div style="font-size:.92rem;font-weight:700;color:var(--ink);margin-bottom:5px">'+(isGHPages?'💬 方法三':'💬 方法二')+'：直接在 Claude.ai 使用</div>'
+        +'<div style="font-size:.85rem;color:var(--muted);line-height:1.75">不需下載檔案，直接在 Claude.ai 對話中使用 Artifact 版本，沒有 CORS 問題。</div></div>'
 
         +'</div></div>'
         +'<button class="btn btn-s" onclick="goStep(2)">← 返回重試</button>'
@@ -1715,7 +1809,9 @@ async function callAPI(masked){
 保單內容：
 ${masked}`;
 
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+  const proxy=getProxy();
+  const endpoint=proxy||'https://api.anthropic.com/v1/messages';
+  const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
     body:JSON.stringify({model:selectedModel,max_tokens:1500,messages:[{role:'user',content:prompt}]})
@@ -2098,7 +2194,39 @@ function copyPrompt(){
 
 // ── API Key ───────────────────────────────────────────────────────────────────
 const KKEY='ins_apikey_v3';
+const PKEY='ins_proxy_v1';
 function getKey(){return document.getElementById('apiKey').value.trim()||localStorage.getItem(KKEY)||'';}
+function getProxy(){
+  const v=document.getElementById('proxyUrl');
+  return (v?v.value.trim():'')||localStorage.getItem(PKEY)||'';
+}
+function onProxyInput(){
+  const v=document.getElementById('proxyUrl').value.trim();
+  const st=document.getElementById('proxyStatus');
+  if(!v){st.className='proxy-status';st.textContent='尚未設定（從 GitHub Pages 使用時需要填寫）';return;}
+  if(v.startsWith('https://')&&v.includes('workers.dev')){
+    st.className='proxy-status ok';st.textContent='✓ 格式正確';
+  } else if(v.startsWith('https://')){
+    st.className='proxy-status ok';st.textContent='✓ 已填入自訂 Proxy';
+  } else {
+    st.className='proxy-status warn';st.textContent='⚠️ 網址應以 https:// 開頭';
+  }
+}
+function saveProxy(){
+  const v=document.getElementById('proxyUrl').value.trim();
+  if(!v){alert('請先輸入 Proxy 網址');return;}
+  localStorage.setItem(PKEY,v);
+  const st=document.getElementById('proxyStatus');
+  st.className='proxy-status ok';st.textContent='✅ 已儲存於本機';
+  const btn=document.querySelector('.proxy-row .savebtn');
+  if(btn){btn.textContent='✅ 已儲存';setTimeout(()=>{btn.textContent='💾 儲存';},2000);}
+}
+function loadSavedProxy(){
+  const v=localStorage.getItem(PKEY);
+  if(!v)return;
+  const el=document.getElementById('proxyUrl');
+  if(el){el.value=v;onProxyInput();}
+}
 function onKeyInput(){
   const v=document.getElementById('apiKey').value.trim();
   const st=document.getElementById('kstat');const tx=document.getElementById('kstatTx');
