@@ -1758,20 +1758,67 @@ async function goStep3(){
 async function callAPI(masked){
   const key=getKey();
   if(!key)throw new Error('請先輸入 API Key');
-  const prompt=`你是台灣資深保險顧問，用口語繁體中文深度分析以下保單（個資已遮蔽，忽略 █）。
+  const prompt=`你是台灣最專業的保險顧問，請深度分析以下保單（個資已遮蔽，忽略 █）。用口語繁體中文，像家庭醫師說話，讓70歲長輩也能看懂。
 
-分析要求：
-1. 保單年份超過10年需標註「老舊保單」並說明保障設計已過時的具體影響
-2. 重大疾病險必須判斷是傳統6項、22項還是36項
-3. 醫療險必須判斷日額型或實支實付，並說明現代醫療下的不足
-4. 身故保障必須加總所有有身故給付的保單計算總額
-5. 繳費狀態：超過生效年+繳費年期的保單標註為「已繳清」
-6. 必須提到2024年關鍵市場變化：疾病失能險已停售、實支實付改正本理賠
-7. 推薦必須是「具體商品方向」而非只說「補XX險」，並說明為何現在是投保時機
-8. 預算不足時，告知「最高CP值的一個補強方向」
+【分析準則】
+A. 老舊保單（10年以上）：明確說明哪裡已過時、對保戶的實際影響
+B. 重疾險：必須判斷傳統6項/22項/36項，並說明差異
+C. 醫療險：判斷日額型或實支實付，並說明現代自費醫療下的不足
+D. 副本/正本理賠：2024年實支實付改正本，舊保單若有副本優勢必須標註保留
+E. 身故保障：加總所有有身故給付保單的實際總額，不能只看主約
+F. 繳費狀態：生效年+繳費年期≤現在=已繳清，必須標註
+G. 2024市場變化必提：①疾病失能險全停售 ②實支實付正本化 ③有無保險公司合併重組
+H. 建議要有CP值判斷和「為什麼現在要做」的時機說明
+I. 保單健檢：每張保單給「保留/注意/確認」三種狀態之一
 
-只回覆JSON，不加markdown：
-{"score":<0-100>,"scoreDesc":"<一句話口語說明>","urgent":"<最緊急一件事，直接說行動>","keyPoints":["<重點1，15字內>","<重點2，15字內>","<重點3，15字內>"],"marketAlerts":["<2024市場重要變化1>","<市場變化2>"],"pros":[{"title":"<優點>","detail":"<具體說明保了什麼、保額多少、優勢>"}],"gaps":[{"type":"<缺口名稱>","severity":"high|medium|low","headline":"<一句話說影響>","detail":"<具體說明：萬一發生什麼事、差多少錢、有什麼風險>","action":"<具體第一步行動>","marketNote":"<相關市場現況，如停售資訊>"}],"existingPolicies":[{"company":"<公司>","product":"<商品>","type":"<險種>","amount":"<保額>","since":"<生效年>","paidUp":"<是/否/未知>","policyAge":"<保單年齡，如25年老單>","oneLineSummary":"<一句話說這張保單保了什麼、有什麼值得注意>","warning":"<此保單需要注意的問題，無則空字串>"}],"totalDeathBenefit":"<所有保單身故給付加總>","recommendations":[{"title":"<建議標題>","priority":"urgent|soon|optional","reason":"<為什麼要做，數據支撐>","action":"<具體做法，第一步是什麼>","estimatedCost":"<月費估算>","cpValue":"<高/中/低，說明CP值原因>","timeNow":"<為什麼現在要做的理由>"}],"budgetPriority":"<如果只有2000元預算，最值得補哪一個，為什麼>","dashData":{"totalPremium":<年保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},"timeline":[{"name":"<保單名>","since":"<年>","years":<繳費年>,"endYear":<終止年>,"paidUp":<true/false>}],"overallAdvice":"<3-5句整體建議，說清楚現在最重要的事和不用擔心的事>","privacyNote":"<說明哪些個資已遮蔽>"}
+只回覆JSON不加markdown，欄位說明如下：
+{
+"score":<0-100保障完整度>,
+"scoreDesc":"<口語一句話，用比喻說明，如：保障像有安全帽但沒安全氣囊>",
+"urgent":"<最緊急一件事，直接說行動，不超過20字>",
+"keyPoints":["<重點1，15字內>","<重點2>","<重點3>"],
+"summary":["<摘要1>","<摘要2>","<摘要3>"],
+"marketAlerts":["<2024重要市場變化，每條說清楚對這份保單的影響>"],
+"totalDeathBenefit":"<加總所有有身故給付的保單，列出計算式，如：20萬+104萬+30萬+50萬=204萬>",
+"budgetPriority":"<預算只有2000元時，最值得優先補的一件事及原因>",
+"pros":[{"title":"<優點標題>","detail":"<具體說保了什麼、保額多少、為何是優點>"}],
+"gaps":[{
+  "type":"<缺口名稱>",
+  "severity":"high|medium|low",
+  "headline":"<一句話說這個缺口的影響>",
+  "detail":"<具體數字：萬一發生X，會差多少錢，造成什麼困境>",
+  "action":"<具體第一步行動>",
+  "marketNote":"<相關2024市場現況，如停售、費率調整>",
+  "ageNote":"<年齡增加對此缺口的影響，如：每晚一年投保月費增加多少>"
+}],
+"existingPolicies":[{
+  "company":"<保險公司>",
+  "product":"<商品名>",
+  "type":"<險種>",
+  "amount":"<保額>",
+  "since":"<生效年>",
+  "paidUp":"是|否|未知",
+  "policyAge":"<如：25年老單>",
+  "status":"保留|注意|確認",
+  "statusReason":"<為何給這個狀態>",
+  "oneLineSummary":"<一句話說保了什麼、現在的價值>",
+  "warning":"<需要注意的問題，無則空字串>",
+  "copyClaimNote":"<如果是醫療險，說明是副本或正本理賠，對現在的影響>"
+}],
+"recommendations":[{
+  "title":"<建議標題>",
+  "priority":"urgent|soon|optional",
+  "reason":"<為什麼要做，有具體數字支撐>",
+  "action":"<具體做法，第一步是什麼>",
+  "estimatedCost":"<月費估算區間>",
+  "cpValue":"<高|中|低，一句話說明原因>",
+  "timeNow":"<為什麼現在投保比以後好，有年齡/費率/市場的具體理由>"
+}],
+"dashData":{"totalPremium":<年繳總保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},
+"timeline":[{"name":"<保單名>","company":"<公司>","since":"<年>","years":<繳費年>,"endYear":<終止年>,"paidUp":true|false}],
+"overallAdvice":"<整體建議：①放心的是什麼 ②需要注意的是什麼 ③最重要的一個行動>",
+"privacyNote":"<說明哪些個資已遮蔽>"
+}
 
 保單內容：
 ${masked}`;
@@ -2096,92 +2143,138 @@ function switchTab(t){
 
 // ── Deep Research Prompt ──────────────────────────────────────────────────────
 function buildDeepPrompt(r){
-  const age=document.getElementById('pAge').value;
-  const gender=document.getElementById('pGender').value;
-  const family=document.getElementById('pFamily').value;
-  const job=document.getElementById('pJob').value;
-  const budget=document.getElementById('pBudget').value;
-  const priority=document.getElementById('pPri').value;
+  var age=document.getElementById('pAge').value||'';
+  var gender=document.getElementById('pGender').value||'';
+  var family=document.getElementById('pFamily').value||'';
+  var job=document.getElementById('pJob').value||'';
+  var budget=document.getElementById('pBudget').value||'';
+  var priority=document.getElementById('pPri').value||'';
 
-  const profile=[age&&`${age}歲`,gender,family,job].filter(Boolean).join('、')||'（未提供）';
-  const budgetLine=budget?`每月可增加保費預算：${parseInt(budget).toLocaleString()} 元`:'預算彈性（未指定）';
-  const priLine=priority?`優先補強：${priority}`:'依缺口重要性排序';
+  var profileParts=[age?age+'歲':'',gender,family,job].filter(Boolean);
+  var profile=profileParts.length?profileParts.join('、'):'（未提供）';
+  var budgetLine=budget?'每月可增加保費預算：'+parseInt(budget).toLocaleString()+' 元':'預算彈性（未指定）';
+  var priLine=priority?'優先補強：'+priority:'依缺口重要性排序';
 
-  const policies_str=(r.existingPolicies||[]).length
-    ? (r.existingPolicies||[]).map((p,i)=>`${i+1}. ${p.company||''} ${p.product||''} / ${p.type||''} / 保額 ${p.amount||'—'} / 生效 ${p.since||'—'}`).join('\n')
+  var NL='\n';
+
+  // Policies with full details
+  var policies_str=(r.existingPolicies||[]).length
+    ? (r.existingPolicies||[]).map(function(p,i){
+        var paidBadge=p.paidUp==='是'?' 【已繳清】':'';
+        var warn=p.warning?' ⚠️'+p.warning:'';
+        var copyNote=p.copyClaimNote?' 【'+p.copyClaimNote+'】':'';
+        var age2=p.policyAge?' （'+p.policyAge+'）':'';
+        return (i+1)+'. '+(p.company||'')+' '+(p.product||'')+' / '+(p.type||'')+' / 保額 '+(p.amount||'—')+' / 生效 '+(p.since||'—')+paidBadge+age2+warn+copyNote;
+      }).join(NL)
     : '（請依保障摘要推斷）';
 
-  const gaps_str=(r.gaps||[]).map(function(g){
+  // Gaps with full details including ageNote and marketNote
+  var gaps_str=(r.gaps||[]).map(function(g){
     var sevLabel=g.severity==='high'?'⚠️高':g.severity==='medium'?'🔶中':'🔵低';
     var reason=g.reason||g.headline||g.detail||'';
-    return '• '+g.type+'（'+sevLabel+'）：'+reason;
-  }).join('\n')
-    || (r.cons||[]).map(function(c){return '• '+(typeof c==='object'?c.headline||c.type:c);}).join('\n');
+    var ageNote=g.ageNote?NL+'   年齡影響：'+g.ageNote:'';
+    var mktNote=g.marketNote?NL+'   市場現況：'+g.marketNote:'';
+    return '• '+g.type+'（'+sevLabel+'）：'+reason+ageNote+mktNote;
+  }).join(NL) || (r.cons||[]).map(function(c){return '• '+(typeof c==='object'?c.headline||c.type:c);}).join(NL);
 
-  // Build cancer/LTC context from known gaps
-  const hasLTC=(r.gaps||[]).some(g=>/長照|失能|照護/i.test(g.type||''));
-  const hasCancer=(r.gaps||[]).some(g=>/癌|重大|傷病/i.test(g.type||''));
-  const existingTypes=(r.existingPolicies||[]).map(p=>p.type||'').join('、');
+  // Recommendations with full context
+  var recs_str=(r.recommendations||[]).map(function(x,i){
+    var t=typeof x==='object'?x.title:String(x);
+    var cost=typeof x==='object'&&x.estimatedCost?x.estimatedCost:'';
+    var reason=typeof x==='object'&&x.reason?x.reason:'';
+    var timeNow=typeof x==='object'&&x.timeNow?x.timeNow:'';
+    var cp=typeof x==='object'&&x.cpValue?x.cpValue:'';
+    return (i+1)+'. '+t+(cost?' 約'+cost+'/月':'')+NL
+      +(reason?'   原因：'+reason+NL:'')
+      +(timeNow?'   投保時機：'+timeNow+NL:'')
+      +(cp?'   CP值：'+cp+NL:'');
+  }).join(NL);
 
-  const prompt=`你是台灣專業保險顧問，請開啟深度研究模式，幫我完成以下兩件事：
+  var hasLTC=(r.gaps||[]).some(function(g){return /長照|失能|照護/i.test(g.type||'');});
+  var hasCancer=(r.gaps||[]).some(function(g){return /癌|重大|傷病/i.test(g.type||'');});
 
-══════════════════════════════════════
-【第一部分】現有保單條款深度查詢
-══════════════════════════════════════
+  // Use specific product names to avoid duplicate recommendations
+  var existingTypes=(r.existingPolicies||[]).map(function(p){
+    return (p.company||'')+(p.product?' '+p.product:'')+'（'+(p.type||'')+'）';
+  }).join('、')||'（未知）';
 
-我的現有保單：
-${policies_str}
+  // Market alerts section
+  var marketAlertsStr=(r.marketAlerts&&r.marketAlerts.length)
+    ? '【市場重要背景 — 請重點搜尋確認現況】'+NL+(r.marketAlerts||[]).map(function(a){return '⚡ '+a;}).join(NL)+NL
+    : '';
 
-請針對每一張保單，搜尋並回答：
+  // Optional specialized sections
+  var ltcSection=hasLTC
+    ? NL+'6. 【長照/失能專項】（⚠️ 重要）'+NL
+      +'   - 2024/7 疾病失能險全停售，目前市場只剩意外失能險，請說明替代方案'+NL
+      +'   - 目前仍在販售的長照險：申請資格（ADL幾項/CDR幾分）、給付方式、等待期'+NL
+      +'   - 長照險 vs 失能扶助險 vs 嚴重特定傷病險的差異與選擇建議'+NL
+      +'   - 現在（'+(age||'此年齡')+'歲）投保長照相關商品的費率，以及每晚投保幾年保費增加多少'
+    : '';
 
-【A. 條款細節】
-□ 重大疾病險：傳統6項 / 新式22項 / 36項重疾？
-□ 醫療險：日額型 / 實支實付？住院才賠或門診也賠？
-□ 失能險：一次給付 / 每月扶助金？等待期多長？
-□ 其他險種：實際保障範圍與理賠條件
+  var cancerSection=hasCancer
+    ? NL+'7. 【癌症保障專項】'+NL
+      +'   - 重大傷病險（22項 vs 36項）目前市場主流商品比較'+NL
+      +'   - 癌症險與醫療實支實付的最佳搭配方式'+NL
+      +'   - 依台灣十大癌症死因，此投保人最需要補強哪種癌症相關保障'
+    : '';
 
-【B. 停售風險評估】
-□ 此商品目前是否仍在販售？
-□ 若已停售，投保人需注意哪些權益保全事項？
-□ 近年是否有調整費率或縮減保障？
+  var sectionNum=hasLTC&&hasCancer?8:hasLTC||hasCancer?8:7;
+  var budgetSection=NL+sectionNum+'. 【高CP值方案】'+NL
+    +'   如果只有'+(budget||'有限')+' 元/月的預算，最值得優先補的一個方案，說明具體理由與預期效果';
 
-【C. 理賠難易度評比】
-□ 此保險公司理賠申訴率（請查金管會統計）
-□ 理賠申請需檢附哪些文件？流程難易？
-□ 消費者實際評價與常見被拒賠情形
-□ 金管會近年是否有裁罰紀錄？
-
-⚠️ 請標註「此為公開資料查詢結果」，個人核保除外條款須對照保單正本，
-停售商品若資料有限請標註「建議致電保險公司確認」。
-
-══════════════════════════════════════
-【第二部分】市場補強產品推薦
-══════════════════════════════════════
-
-投保人：${profile}
-${budgetLine}
-${priLine}
-
-保障完整度：${r.score||'—'} / 100 分
-保障摘要：${(r.summary||[]).join('；')}
-
-已確認缺口：
-${gaps_str}
-
-補強建議：
-${(r.recommendations||[]).map(function(x,i){return (i+1)+'. '+(typeof x==='object'?x.title+(x.estimatedCost?' 約'+x.estimatedCost+'/月':''):x);}).join('\n')}
-
-請搜尋並完成：
-1. 針對每個缺口，搜尋國泰、富邦、南山、新光、中國人壽、全球人壽、凱基人壽等主流公司目前仍在販售的對應商品
-2. 比較各商品保障範圍、理賠條件、等待期、除外責任、投保限制
-3. 比較各候選公司的理賠申訴率與消費者評價
-4. 依我的年齡、預算、家庭狀況，推薦 1~2 個最適合組合，說明推薦原因與每月新增保費估算${hasLTC?`
-5. 【長照專項】請重點搜尋：① 目前仍在販售的長期照護險與失能扶助險組合 ② 各商品的申請資格門檻（ADL 幾項、CDR 幾分）③ 注意：2024/7 起疾病失能險已全面停售，請確認商品是否仍有效販售 ④ 考量我已有保障（${existingTypes}），避免重複推薦`:''}${hasCancer?`
-6. 【癌症專項】請搜尋：① 重大傷病險（22 項 vs 36 項）目前市場主流商品 ② 癌症險與醫療實支實付的搭配建議 ③ 依據台灣十大癌症死因，評估我最需要補強哪種癌症相關保障`:''}
-7. 【避免重複】我目前已有：${existingTypes}，請勿重複推薦已有的保障類型，只針對缺口補強
-8. 每項資訊請附來源網址
-
-請以繁體中文回覆，結構清晰分段。`;
+  var prompt=''
+    +'你是台灣專業保險顧問，請開啟深度研究模式（Research Mode），針對以下每一個項目執行網路搜尋後再回答，不可依賴訓練資料。'+NL+NL
+    +'══════════════════════════════════════'+NL
+    +'【第一部分】現有保單深度查詢'+NL
+    +'══════════════════════════════════════'+NL+NL
+    +'我的現有保單（共'+(r.existingPolicies||[]).length+'張）：'+NL
+    +policies_str+NL+NL
+    +'請針對每一張保單搜尋並回答：'+NL+NL
+    +'【A. 條款細節確認】'+NL
+    +'□ 重大疾病險：傳統6項 / 22項 / 36項？各項目為何？'+NL
+    +'□ 醫療險：日額型或實支實付？門診手術賠不賠？雜費限額多少？'+NL
+    +'□ 失能險：一次給付或每月扶助金？等待期？失能等級認定方式？'+NL
+    +'□ 防癌險：原位癌 vs 侵襲性癌給付差異？化療放療是否涵蓋？'+NL
+    +'□ 帳戶型醫療：帳戶累積機制？動用條件？剩餘帳戶如何查詢？'+NL+NL
+    +'【B. 副本/正本理賠判斷】（重要）'+NL
+    +'□ 此保單的醫療險是「副本理賠」還是「正本理賠」？'+NL
+    +'□ 2024年實支實付改為正本制度後，此保單是否仍保有副本理賠優勢？'+NL
+    +'□ 如果有副本理賠優勢，如何保全？搭配第二張實支實付時需注意什麼？'+NL+NL
+    +'【C. 停售與費率評估】'+NL
+    +'□ 此商品目前是否仍在販售？若已停售，哪年停售？'+NL
+    +'□ 近年是否調整費率或縮減保障？保戶需要注意什麼？'+NL+NL
+    +'【D. 保險公司財務與服務評估】'+NL
+    +'□ 此保險公司近5年的理賠申訴率（查金管會統計）'+NL
+    +'□ 是否有合併、重組、或財務預警的消息？'+NL
+    +'□ 金管會近年是否有裁罰紀錄？'+NL+NL
+    +'⚠️ 請在每項答案後標註資料來源與查詢日期。停售商品若資料有限，請標註「建議致電保險公司確認」。'+NL+NL
+    +'══════════════════════════════════════'+NL
+    +'【第二部分】市場補強產品推薦'+NL
+    +'══════════════════════════════════════'+NL+NL
+    +'【投保人基本條件】'+NL
+    +profile+NL
+    +budgetLine+NL
+    +priLine+NL
+    +'保障完整度：'+(r.score||'—')+' / 100 分'+NL+NL
+    +marketAlertsStr+NL
+    +'【已確認的保障缺口（按優先程度排序）】'+NL
+    +gaps_str+NL+NL
+    +'【補強建議（含預算估算）】'+NL
+    +recs_str+NL
+    +'【我已有的保障（請勿重複推薦）】'+NL
+    +existingTypes+NL+NL
+    +'【請搜尋並完成以下任務】'+NL+NL
+    +'1. 【產品搜尋】針對每個缺口，搜尋國泰、富邦、南山、新光（注意合併動態）、中國人壽、全球人壽、凱基人壽目前仍在販售的對應商品，列出2~3個候選方案'+NL+NL
+    +'2. 【條款比較】每個候選商品說明：保障範圍、理賠條件、等待期、除外責任、投保年齡限制、核保嚴格程度'+NL+NL
+    +'3. 【理賠難易度比較】各保險公司的理賠申訴率（查金管會最新統計）、理賠所需文件、消費者評價'+NL+NL
+    +'4. 【年齡費率分析】現在投保 vs 晚1年/3年的保費差異估算，說明為什麼現在是（或不是）最佳投保時機'+NL+NL
+    +'5. 【最佳組合推薦】依投保人年齡、預算、家庭狀況，推薦最適合的1~2個方案組合：完整月費估算、具體推薦理由（不能只說「保障完整」）、注意事項'
+    +ltcSection
+    +cancerSection
+    +budgetSection+NL+NL
+    +(sectionNum+1)+'. 【資料來源】每項資訊請附來源網址和查詢日期'+NL+NL
+    +'請以繁體中文回覆，結構清晰分段，每個建議都要有具體數字支撐。';
 
   document.getElementById('dpBox').textContent=prompt;
   document.getElementById('deepBlock').style.display='block';
