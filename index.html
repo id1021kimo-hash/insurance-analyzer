@@ -1758,8 +1758,20 @@ async function goStep3(){
 async function callAPI(masked){
   const key=getKey();
   if(!key)throw new Error('請先輸入 API Key');
-  const prompt=`你是台灣保險顧問，用口語繁體中文分析以下保單（個資已遮蔽，忽略 █）。只回覆JSON，不加markdown：
-{"score":<0-100>,"scoreDesc":"<一句話>","urgent":"<最緊急一件事>","keyPoints":["<重點1>","<重點2>","<重點3>"],"pros":[{"title":"<優點>","detail":"<說明>"}],"gaps":[{"type":"<缺口>","severity":"high|medium|low","headline":"<影響>","detail":"<具體說明>","action":"<下一步>"}],"existingPolicies":[{"company":"<公司>","product":"<商品>","type":"<險種>","amount":"<保額>","since":"<生效年>","premium":"<保費>","oneLineSummary":"<一句話>"}],"recommendations":[{"title":"<建議>","priority":"urgent|soon|optional","reason":"<原因>","action":"<做法>","estimatedCost":"<月費>"}],"dashData":{"totalPremium":<年保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},"timeline":[{"name":"<保單>","since":"<年>","years":<繳費年>,"endYear":<終止年>}],"overallAdvice":"<整體建議3句>","privacyNote":"<遮蔽說明>"}
+  const prompt=`你是台灣資深保險顧問，用口語繁體中文深度分析以下保單（個資已遮蔽，忽略 █）。
+
+分析要求：
+1. 保單年份超過10年需標註「老舊保單」並說明保障設計已過時的具體影響
+2. 重大疾病險必須判斷是傳統6項、22項還是36項
+3. 醫療險必須判斷日額型或實支實付，並說明現代醫療下的不足
+4. 身故保障必須加總所有有身故給付的保單計算總額
+5. 繳費狀態：超過生效年+繳費年期的保單標註為「已繳清」
+6. 必須提到2024年關鍵市場變化：疾病失能險已停售、實支實付改正本理賠
+7. 推薦必須是「具體商品方向」而非只說「補XX險」，並說明為何現在是投保時機
+8. 預算不足時，告知「最高CP值的一個補強方向」
+
+只回覆JSON，不加markdown：
+{"score":<0-100>,"scoreDesc":"<一句話口語說明>","urgent":"<最緊急一件事，直接說行動>","keyPoints":["<重點1，15字內>","<重點2，15字內>","<重點3，15字內>"],"marketAlerts":["<2024市場重要變化1>","<市場變化2>"],"pros":[{"title":"<優點>","detail":"<具體說明保了什麼、保額多少、優勢>"}],"gaps":[{"type":"<缺口名稱>","severity":"high|medium|low","headline":"<一句話說影響>","detail":"<具體說明：萬一發生什麼事、差多少錢、有什麼風險>","action":"<具體第一步行動>","marketNote":"<相關市場現況，如停售資訊>"}],"existingPolicies":[{"company":"<公司>","product":"<商品>","type":"<險種>","amount":"<保額>","since":"<生效年>","paidUp":"<是/否/未知>","policyAge":"<保單年齡，如25年老單>","oneLineSummary":"<一句話說這張保單保了什麼、有什麼值得注意>","warning":"<此保單需要注意的問題，無則空字串>"}],"totalDeathBenefit":"<所有保單身故給付加總>","recommendations":[{"title":"<建議標題>","priority":"urgent|soon|optional","reason":"<為什麼要做，數據支撐>","action":"<具體做法，第一步是什麼>","estimatedCost":"<月費估算>","cpValue":"<高/中/低，說明CP值原因>","timeNow":"<為什麼現在要做的理由>"}],"budgetPriority":"<如果只有2000元預算，最值得補哪一個，為什麼>","dashData":{"totalPremium":<年保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},"timeline":[{"name":"<保單名>","since":"<年>","years":<繳費年>,"endYear":<終止年>,"paidUp":<true/false>}],"overallAdvice":"<3-5句整體建議，說清楚現在最重要的事和不用擔心的事>","privacyNote":"<說明哪些個資已遮蔽>"}
 
 保單內容：
 ${masked}`;
@@ -1820,7 +1832,25 @@ function renderResult(r,masked,mname){
   // ── 最緊急事項 ──
   if(r.urgent){
     const urg=document.getElementById('urgentDiv');
-    if(urg) urg.innerHTML=`<div style="display:flex;gap:10px;align-items:flex-start;padding:14px 16px;background:rgba(192,57,43,.07);border:2px solid rgba(192,57,43,.25);border-radius:10px;margin-bottom:4px"><span style="font-size:1.3rem;flex-shrink:0">🚨</span><div><div style="font-size:.8rem;font-weight:700;color:#952020;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">最優先處理</div><div style="font-size:1rem;color:#7a2020;line-height:1.7;font-weight:500">${r.urgent}</div></div></div>`;
+    if(urg){
+      let urgHtml='<div style="display:flex;gap:10px;align-items:flex-start;padding:14px 16px;background:rgba(192,57,43,.07);border:2px solid rgba(192,57,43,.25);border-radius:10px;margin-bottom:8px"><span style="font-size:1.3rem;flex-shrink:0">🚨</span><div><div style="font-size:.82rem;font-weight:700;color:#952020;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">最優先處理</div><div style="font-size:1rem;color:#7a2020;line-height:1.7;font-weight:500">'+r.urgent+'</div></div></div>';
+      // Market alerts
+      if(r.marketAlerts&&r.marketAlerts.length){
+        urgHtml+='<div style="padding:12px 15px;background:rgba(44,62,122,.07);border:1.5px solid rgba(44,62,122,.2);border-radius:9px;margin-bottom:8px">';
+        urgHtml+='<div style="font-size:.8rem;font-weight:700;color:#2c3e7a;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">📢 2024 市場重要變化</div>';
+        r.marketAlerts.forEach(function(a){urgHtml+='<div style="font-size:.9rem;color:#1a2456;line-height:1.75;margin-bottom:4px">⚡ '+a+'</div>';});
+        urgHtml+='</div>';
+      }
+      // Total death benefit
+      if(r.totalDeathBenefit){
+        urgHtml+='<div style="padding:10px 14px;background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.25);border-radius:8px;font-size:.9rem;color:#5a4020;margin-bottom:8px">💰 <strong>身故保障合計：</strong>'+r.totalDeathBenefit+'</div>';
+      }
+      // Budget priority
+      if(r.budgetPriority){
+        urgHtml+='<div style="padding:10px 14px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.2);border-radius:8px;font-size:.9rem;color:#1a5c35;margin-bottom:4px">⭐ <strong>預算有限時最值得優先補：</strong>'+r.budgetPriority+'</div>';
+      }
+      urg.innerHTML=urgHtml;
+    }
   }
 
   // ── 整體建議 ──
