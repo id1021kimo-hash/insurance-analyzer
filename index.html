@@ -1779,7 +1779,7 @@ I. 保單健檢：每張保單給「保留/注意/確認」三種狀態之一
 "keyPoints":["<重點1，15字內>","<重點2>","<重點3>"],
 "summary":["<摘要1>","<摘要2>","<摘要3>"],
 "marketAlerts":["<2024重要市場變化，每條說清楚對這份保單的影響>"],
-"totalDeathBenefit":"<加總所有有身故給付的保單，列出計算式，如：20萬+104萬+30萬+50萬=204萬>",
+"totalDeathBenefit":"<加總所有身故給付，如:20萬+104萬=124萬>",
 "budgetPriority":"<預算只有2000元時，最值得優先補的一件事及原因>",
 "pros":[{"title":"<優點標題>","detail":"<具體說保了什麼、保額多少、為何是優點>"}],
 "gaps":[{
@@ -1789,7 +1789,7 @@ I. 保單健檢：每張保單給「保留/注意/確認」三種狀態之一
   "detail":"<具體數字：萬一發生X，會差多少錢，造成什麼困境>",
   "action":"<具體第一步行動>",
   "marketNote":"<相關2024市場現況，如停售、費率調整>",
-  "ageNote":"<年齡增加對此缺口的影響，如：每晚一年投保月費增加多少>"
+  "ageNote":"<年齡影響，如:每晚1年月費增加多少>"
 }],
 "existingPolicies":[{
   "company":"<保險公司>",
@@ -1797,20 +1797,12 @@ I. 保單健檢：每張保單給「保留/注意/確認」三種狀態之一
   "type":"<險種>",
   "amount":"<保額>",
   "since":"<生效年>",
-  "paidUp":"是|否|未知",
-  "policyAge":"<如：25年老單>",
-  "status":"保留|注意|確認",
-  "statusReason":"<為何給這個狀態>",
-  "oneLineSummary":"<一句話說保了什麼、現在的價值>",
-  "warning":"<需要注意的問題，無則空字串>",
-  "copyClaimNote":"<如果是醫療險，說明是副本或正本理賠，對現在的影響>"
+  "paidUp":"是|否|未知","policyAge":"<如:25年老單>","status":"保留|注意|確認","statusReason":"<原因>","oneLineSummary":"<一句話>","warning":"<注意事項無則空>","copyClaimNote":"<副本或正本理賠>"
 }],
 "recommendations":[{
   "title":"<建議標題>",
   "priority":"urgent|soon|optional",
-  "reason":"<為什麼要做，有具體數字支撐>",
-  "action":"<具體做法，第一步是什麼>",
-  "estimatedCost":"<月費估算區間>",
+  "reason":"<原因+數字>","action":"<具體做法>","estimatedCost":"<月費估算>",
   "cpValue":"<高|中|低，一句話說明原因>",
   "timeNow":"<為什麼現在投保比以後好，有年齡/費率/市場的具體理由>"
 }],
@@ -1828,7 +1820,7 @@ ${masked}`;
   const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:selectedModel,max_tokens:6000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:selectedModel,max_tokens:8000,messages:[{role:'user',content:prompt}]})
   });
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
   const data=await resp.json();
@@ -1837,20 +1829,37 @@ ${masked}`;
   try{
     return JSON.parse(cleaned);
   }catch(e){
-    // Try to fix truncated JSON by finding last complete object
-    const fixed=cleaned
-      .replace(/,\s*$/, '')           // remove trailing comma
-      .replace(/,\s*}$/, '}')         // fix trailing comma before }
-      .replace(/,\s*]$/, ']');        // fix trailing comma before ]
-    // Try to close unclosed structures
-    let attempt=fixed;
-    const opens=(attempt.match(/\{/g)||[]).length;
-    const closes=(attempt.match(/\}/g)||[]).length;
-    for(let i=0;i<opens-closes;i++) attempt+='"}';
+    // Step 1: basic cleanup
+    let fixed=cleaned
+      .replace(/,\s*([}\]])/g,'$1')  // remove trailing commas
+      .replace(/([^"\\])"([^"]*$)/,'$1"$2"'); // close unclosed string
+    // Step 2: close unclosed structures
+    let opens=(fixed.match(/\{/g)||[]).length;
+    let closes=(fixed.match(/\}/g)||[]).length;
+    let arrOpens=(fixed.match(/\[/g)||[]).length;
+    let arrCloses=(fixed.match(/\]/g)||[]).length;
+    for(let i=0;i<arrOpens-arrCloses;i++) fixed+=']';
+    for(let i=0;i<opens-closes;i++) fixed+='}';
     try{
-      return JSON.parse(attempt);
+      const partial=JSON.parse(fixed);
+      // Fill in missing required fields with safe defaults
+      if(!partial.score) partial.score=0;
+      if(!partial.scoreDesc) partial.scoreDesc='分析結果不完整，請重試';
+      if(!partial.urgent) partial.urgent='請重新分析以獲得完整建議';
+      if(!partial.keyPoints) partial.keyPoints=['資料截斷，請重試'];
+      if(!partial.summary) partial.summary=partial.keyPoints;
+      if(!partial.pros) partial.pros=[];
+      if(!partial.gaps) partial.gaps=[];
+      if(!partial.existingPolicies) partial.existingPolicies=[];
+      if(!partial.recommendations) partial.recommendations=[];
+      if(!partial.dashData) partial.dashData={totalPremium:0,byType:{}};
+      if(!partial.timeline) partial.timeline=[];
+      if(!partial.overallAdvice) partial.overallAdvice='分析結果不完整，建議換用 Opus 4.6 模型重新分析。';
+      if(!partial.privacyNote) partial.privacyNote='已遮蔽個人識別資訊';
+      return partial;
     }catch(e2){
-      throw new Error('AI 回傳格式錯誤，請重試。若持續發生，請換用 Opus 4.6 模型。（'+e.message+')');
+      // Last resort: try callAPIMinimal
+      throw new Error('AI 回傳格式錯誤，系統將自動重試簡化版分析。（'+e.message+')');
     }
   }
 }
@@ -2731,7 +2740,7 @@ async function processResearch(){
     const resp=await fetch(endpoint,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:selectedModel,max_tokens:2000,messages:[{role:'user',content:summaryPrompt}]})
+      body:JSON.stringify({model:selectedModel,max_tokens:4000,messages:[{role:'user',content:summaryPrompt}]})
     });
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
     const data=await resp.json();
@@ -2764,7 +2773,7 @@ async function callAPIMinimal(masked){
   const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:selectedModel,max_tokens:3000,messages:[{role:'user',content:minPrompt}]})
+    body:JSON.stringify({model:selectedModel,max_tokens:4000,messages:[{role:'user',content:minPrompt}]})
   });
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
   const data=await resp.json();
