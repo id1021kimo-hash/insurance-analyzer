@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v26</title>
+<title>保單智能分析系統 v27</title>
 <style>
 :root{--ink:#1a1a2e;--paper:#f5f0e8;--accent:#c8a96e;--accent2:#4a7c6f;--danger:#c0392b;--border:#d4c9b0;--muted:#7a7060;--card:#fefcf7;--shadow:0 4px 20px rgba(26,26,46,.09);--deep:#2c3e7a;--safe:#27ae60;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -351,7 +351,7 @@ canvas{max-width:100%;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Research 補強</p></div>
-  <span class="hbadge">v26 隱私優先</span>
+  <span class="hbadge">v27 隱私優先</span>
 </header>
 <main>
 
@@ -1218,7 +1218,7 @@ async function callAPI(masked){
   if(!key)throw new Error('請先輸入 API Key');
   const prompt=`你是台灣資深保險顧問，深度分析以下保單（個資已遮蔽，忽略 █）。口語繁體中文，讓70歲長輩也能看懂。
 
-準則：①老舊保單說明影響 ②重疾判斷6/22/36項 ③醫療險判斷日額或實支 ④身故保障加總計算 ⑤已繳清標註 ⑥必提2024市場變化（疾病失能停售/實支正本化）⑦建議含CP值與投保時機 ⑧副本理賠優勢需標註
+準則：①老舊保單說明影響 ②重疾判斷6/22/36項 ③醫療險判斷日額或實支 ④身故保障加總計算 ⑤已繳清標註 ⑥必提2024市場變化（疾病失能停售/實支正本化）⑦建議含CP值與投保時機 ⑧副本理賠優勢需標註\n\n重要：每個欄位文字精簡（detail/reason 30字內），保單超過6張時 existingPolicies 只列最重要的6張，確保 JSON 完整不截斷
 
 只回覆JSON不加markdown：
 {"score":<0-100>,"scoreDesc":"<口語一句話>","urgent":"<最緊急行動20字內>","keyPoints":["<15字>","<15字>","<15字>"],"summary":["<摘要1>","<摘要2>","<摘要3>"],"marketAlerts":["<2024重要變化>"],"totalDeathBenefit":"<加總計算式>","budgetPriority":"<2000元預算最值得補什麼>","pros":[{"title":"<優點>","detail":"<具體說明>"}],"gaps":[{"type":"<缺口>","severity":"high|medium|low","headline":"<一句影響>","detail":"<具體數字>","action":"<第一步>","marketNote":"<市場現況>","ageNote":"<年齡影響>"}],"existingPolicies":[{"company":"<公司>","product":"<商品>","type":"<險種>","amount":"<保額>","since":"<年>","paidUp":"是|否|未知","policyAge":"<如:25年老單>","status":"保留|注意|確認","statusReason":"<原因>","oneLineSummary":"<一句話>","warning":"<注意事項>","copyClaimNote":"<副本或正本理賠>"}],"recommendations":[{"title":"<建議>","priority":"urgent|soon|optional","reason":"<原因+數字>","action":"<具體做法>","estimatedCost":"<月費>","cpValue":"<高|中|低+原因>","timeNow":"<現在投保的理由>"}],"dashData":{"totalPremium":<年保費>,"byType":{"壽險":<金額>,"醫療險":<金額>,"意外險":<金額>,"其他":<金額>}},"timeline":[{"name":"<保單>","company":"<公司>","since":"<年>","years":<繳費年>,"endYear":<終止年>,"paidUp":true|false}],"overallAdvice":"<①放心的 ②注意的 ③立刻做的>","privacyNote":"<遮蔽說明>"}
@@ -1231,7 +1231,7 @@ ${masked}`;;
   const resp=await fetch(endpoint,{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:selectedModel,max_tokens:5000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:selectedModel,max_tokens:8000,messages:[{role:'user',content:prompt}]})
   });
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
   const data=await resp.json();
@@ -1240,24 +1240,52 @@ ${masked}`;;
   try{
     return JSON.parse(cleaned);
   }catch(e){
-    // Step 1: basic cleanup
-    let fixed=cleaned
-      .replace(/,\s*([}\]])/g,'$1')  // remove trailing commas
-      .replace(/([^"\\])"([^"]*$)/,'$1"$2"'); // close unclosed string
-    // Step 2: close unclosed structures
-    let opens=(fixed.match(/\{/g)||[]).length;
-    let closes=(fixed.match(/\}/g)||[]).length;
-    let arrOpens=(fixed.match(/\[/g)||[]).length;
-    let arrCloses=(fixed.match(/\]/g)||[]).length;
-    for(let i=0;i<arrOpens-arrCloses;i++) fixed+=']';
-    for(let i=0;i<opens-closes;i++) fixed+='}';
-    try{
-      const partial=JSON.parse(fixed);
-      // Fill in missing required fields with safe defaults
+    var balance=function(str){
+      var st=[],iS=false,e3=false;
+      for(var m=0;m<str.length;m++){
+        var ch=str[m];
+        if(e3){e3=false;continue;}
+        if(ch==='\\'){e3=true;continue;}
+        if(ch==='"'){iS=!iS;continue;}
+        if(iS)continue;
+        if(ch==='{')st.push('}');
+        else if(ch==='[')st.push(']');
+        else if(ch==='}'||ch===']')st.pop();
+      }
+      while(st.length)str+=st.pop();
+      return str;
+    };
+    var repair=function(src){
+      var s=src;
+      var inStr=false,esc=false;
+      for(var i=0;i<s.length;i++){var c=s[i];if(esc){esc=false;continue;}if(c==='\\'){esc=true;continue;}if(c==='"')inStr=!inStr;}
+      if(inStr){
+        var qpos=-1,ins=false,es=false;
+        for(var k=0;k<s.length;k++){var cc=s[k];if(es){es=false;continue;}if(cc==='\\'){es=true;continue;}if(cc==='"'){if(!ins){qpos=k;ins=true;}else{ins=false;}}}
+        if(qpos>=0)s=s.substring(0,qpos);
+      }
+      s=s.replace(/,\s*"[^"]*"\s*:\s*$/,'');
+      s=s.replace(/,\s*"[^"]*"\s*:\s*"?$/,'');
+      s=s.replace(/,\s*"[^"]*$/,'');
+      s=s.replace(/"[^"]*"\s*:\s*$/,'');
+      s=s.replace(/,\s*$/,'');
+      s=s.replace(/:\s*$/,':null');
+      s=s.replace(/,\s*\{[^{}]*$/,'');
+      s=s.replace(/,\s*([}\]])/g,'$1');
+      return balance(s);
+    };
+    var partial=null;
+    try{partial=JSON.parse(repair(cleaned));}catch(e3){
+      try{
+        var lb=Math.max(cleaned.lastIndexOf('"},'),cleaned.lastIndexOf('"}]'),cleaned.lastIndexOf('}]'),cleaned.lastIndexOf('"]'),cleaned.lastIndexOf('",'));
+        if(lb>0)partial=JSON.parse(balance(cleaned.substring(0,lb+1).replace(/,$/,'')));
+      }catch(e4){partial=null;}
+    }
+    if(partial){
       if(!partial.score) partial.score=0;
-      if(!partial.scoreDesc) partial.scoreDesc='分析結果不完整，請重試';
-      if(!partial.urgent) partial.urgent='請重新分析以獲得完整建議';
-      if(!partial.keyPoints) partial.keyPoints=['資料截斷，請重試'];
+      if(!partial.scoreDesc) partial.scoreDesc='分析結果部分截斷，以下為可還原的內容';
+      if(!partial.urgent) partial.urgent='建議重新分析以取得完整建議';
+      if(!partial.keyPoints) partial.keyPoints=partial.summary||['部分資料截斷'];
       if(!partial.summary) partial.summary=partial.keyPoints;
       if(!partial.pros) partial.pros=[];
       if(!partial.gaps) partial.gaps=[];
@@ -1265,11 +1293,10 @@ ${masked}`;;
       if(!partial.recommendations) partial.recommendations=[];
       if(!partial.dashData) partial.dashData={totalPremium:0,byType:{}};
       if(!partial.timeline) partial.timeline=[];
-      if(!partial.overallAdvice) partial.overallAdvice='分析結果不完整，建議換用 Opus 4.6 模型重新分析。';
+      if(!partial.overallAdvice) partial.overallAdvice='部分分析結果已還原。若內容不完整，建議減少保單數量分批分析，或改用 Opus 4.6 模型。';
       if(!partial.privacyNote) partial.privacyNote='已遮蔽個人識別資訊';
       return partial;
-    }catch(e2){
-      // Last resort: try callAPIMinimal
+    } else {
       throw new Error('AI 回傳格式錯誤，系統將自動重試簡化版分析。（'+e.message+')');
     }
   }
