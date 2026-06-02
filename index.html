@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保單智能分析系統 v27</title>
+<title>保單智能分析系統 v28</title>
 <style>
 :root{--ink:#1a1a2e;--paper:#f5f0e8;--accent:#c8a96e;--accent2:#4a7c6f;--danger:#c0392b;--border:#d4c9b0;--muted:#7a7060;--card:#fefcf7;--shadow:0 4px 20px rgba(26,26,46,.09);--deep:#2c3e7a;--safe:#27ae60;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -351,7 +351,7 @@ canvas{max-width:100%;}
 <body>
 <header>
   <div><h1>🛡️ 保單智能分析系統</h1><p>AI 輔助 · 個資保護 · 保障缺口診斷 · Research 補強</p></div>
-  <span class="hbadge">v27 隱私優先</span>
+  <span class="hbadge">v28 隱私優先</span>
 </header>
 <main>
 
@@ -745,6 +745,7 @@ canvas{max-width:100%;}
         <div style="display:flex;flex-direction:column;justify-content:center;gap:10px" id="summaryPts"></div>
       </div>
       <div id="urgentDiv" style="margin-top:12px"></div>
+      <div id="topPicksDiv" style="margin-top:12px"></div>
       <div style="margin-top:12px;padding:13px 16px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.2);border-radius:9px;display:none" id="overallAdviceWrap">
         <div style="font-size:.82rem;font-weight:700;color:var(--accent2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">💬 整體建議</div>
         <div style="font-size:.95rem;color:var(--ink);line-height:1.85" id="overallAdvice"></div>
@@ -1355,6 +1356,33 @@ function renderResult(r,masked,mname){
     if(oaw) oaw.style.display='block';
   }
 
+  // ── 投保建議（Research 具體商品，最明顯處）──
+  var tpDiv=document.getElementById('topPicksDiv');
+  if(tpDiv){
+    if(researchData&&researchData.topPicks&&researchData.topPicks.length){
+      var tpH='<div style="padding:14px 16px;background:linear-gradient(135deg,rgba(200,169,110,.12),rgba(200,169,110,.04));border:2px solid var(--accent);border-radius:11px">'
+        +'<div style="font-size:.85rem;font-weight:700;color:#7a5c20;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">🎯 建議投保（依優先順序）</div>';
+      researchData.topPicks.slice(0,6).forEach(function(p){
+        var rc=p.rank<=2?'#c0392b':p.rank<=4?'#e8a020':'#4a7c6f';
+        tpH+='<div style="margin-bottom:9px;padding:11px 13px;background:#fff;border-left:4px solid '+rc+';border-radius:0 8px 8px 0">'
+          +'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px">'
+          +'<span style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:10px;background:'+rc+';color:#fff">第'+(p.rank||'?')+'順位</span>'
+          +'<span style="font-size:.98rem;font-weight:700;color:var(--ink)">'+(p.company||'')+' '+(p.product||'')+'</span>'
+          +(p.monthlyCost?'<span style="margin-left:auto;font-size:.82rem;color:var(--muted)">月費 '+p.monthlyCost+'</span>':'')
+          +'</div>'
+          +(p.gap?'<div style="font-size:.8rem;color:var(--deep)">補強：'+p.gap+'</div>':'')
+          +(p.reason?'<div style="font-size:.85rem;color:#4a4840;line-height:1.65;margin-top:2px">'+p.reason+'</div>':'')
+          +(p.pros?'<div style="font-size:.82rem;color:#1a5c35;margin-top:2px">✓ '+p.pros+'</div>':'')
+          +(p.cons?'<div style="font-size:.82rem;color:#7a2020">⚠ '+p.cons+'</div>':'')
+          +'</div>';
+      });
+      tpH+='</div>';
+      tpDiv.innerHTML=tpH;
+    } else {
+      tpDiv.innerHTML='<div style="padding:12px 15px;background:rgba(44,62,122,.05);border:1px dashed rgba(44,62,122,.25);border-radius:9px;font-size:.88rem;color:var(--deep);line-height:1.7">💡 <strong>想知道該買哪幾家公司的哪張保單？</strong> 往下複製 Research Prompt，到 Claude.ai 執行後貼回，這裡會列出指名道姓的具體投保建議與優先順序。</div>';
+    }
+  }
+
   // ── 優點（有標題+詳情） ──
   const pros=document.getElementById('prosDiv');
   (r.pros||[]).forEach(p=>{
@@ -1711,17 +1739,39 @@ function buildDeepPrompt(r){
     +recs_str+NL
     +'【我已有的保障（請勿重複推薦）】'+NL
     +existingTypes+NL+NL
-    +'【請搜尋並完成以下任務】'+NL+NL
-    +'1. 【產品搜尋】針對每個缺口，搜尋國泰、富邦、南山、新光（注意合併動態）、中國人壽、全球人壽、凱基人壽目前仍在販售的對應商品，列出2~3個候選方案'+NL+NL
-    +'2. 【條款比較】每個候選商品說明：保障範圍、理賠條件、等待期、除外責任、投保年齡限制、核保嚴格程度'+NL+NL
-    +'3. 【理賠難易度比較】各保險公司的理賠申訴率（查金管會最新統計）、理賠所需文件、消費者評價'+NL+NL
-    +'4. 【年齡費率分析】現在投保 vs 晚1年/3年的保費差異估算，說明為什麼現在是（或不是）最佳投保時機'+NL+NL
-    +'5. 【最佳組合推薦】依投保人年齡、預算、家庭狀況，推薦最適合的1~2個方案組合：完整月費估算、具體推薦理由（不能只說「保障完整」）、注意事項'
+    +'【請搜尋並完成以下任務 — 重要：必須指名道姓，不要只給方向】'+NL+NL
+    +'⚠️ 核心要求：針對每一個保障缺口，必須明確列出「具體公司名稱 + 具體商品全名 + 預估月費」，例如「全球人壽 醫卡安心住院醫療健康保險附約（HNRB）月繳約 950 元」，絕對不可以只說「投保實支實付醫療險」這種沒有商品名的空泛建議。如果搜尋不到確切商品名，請標註「需向該公司業務確認最新商品」。'+NL+NL
+    +'1. 【逐缺口指名推薦】針對下方每一個缺口，各推薦 2~3 個具體商品，每個商品必須包含：'+NL
+    +'   ① 保險公司名稱 + 商品完整名稱（含商品代號若有）'+NL
+    +'   ② 預估月費／年費（依投保人年齡性別估算）'+NL
+    +'   ③ 推薦原因（為什麼選這個，1~2句）'+NL
+    +'   ④ 優點（具體保障內容、理賠條件）'+NL
+    +'   ⑤ 缺點／注意事項（等待期、除外、核保限制）'+NL+NL
+    +'2. 【投保優先順序排名】將所有推薦商品做成一份「投保順序清單」，依「風險急迫性 × CP值 × 預算」排名，明確標示第1順位該先買什麼、第2順位、第3順位…，並說明排名理由'+NL+NL
+    +'3. 【短中長期規劃表】依投保人預算，規劃：'+NL
+    +'   • 短期（現在~1年）：預算內最該先補的 1~2 張具體商品（列出公司+商品+月費）'+NL
+    +'   • 中期（1~3年）：收入提升後補強的商品'+NL
+    +'   • 長期（3年以上）：完整保障佈局的商品'+NL+NL
+    +'4. 【理賠難易度】各推薦商品所屬公司的理賠申訴率（查金管會最新統計）、理賠口碑'+NL+NL
+    +'5. 【最佳組合】在投保人每月預算內，給出 1~2 套「具體商品組合包」，列出組合內每張商品的公司+名稱+月費，以及組合總月費'
     +ltcSection
     +cancerSection
     +budgetSection+NL+NL
-    +(sectionNum+1)+'. 【資料來源】每項資訊請附來源網址和查詢日期'+NL+NL
-    +'請以繁體中文回覆，結構清晰分段，每個建議都要有具體數字支撐。';
+    +(sectionNum+1)+'. 【資料來源】每項資訊附來源網址和查詢日期'+NL+NL
+    +'【回覆格式要求】請用以下結構，方便後續整理：'+NL
+    +'═══ 投保優先順序 ═══'+NL
+    +'第1順位：[公司] [商品名] | 月費[X]元 | 補強[缺口] | 原因[...]'+NL
+    +'第2順位：...'+NL
+    +'（依此類推）'+NL+NL
+    +'═══ 各缺口詳細推薦 ═══'+NL
+    +'【缺口1名稱】'+NL
+    +'  推薦A：[公司][商品名] 月費[X] ｜優點[...] ｜缺點[...] ｜推薦原因[...]'+NL
+    +'  推薦B：...'+NL+NL
+    +'═══ 短中長期規劃 ═══'+NL
+    +'短期：[具體商品清單+月費]'+NL
+    +'中期：...'+NL
+    +'長期：...'+NL+NL
+    +'請以繁體中文回覆，每個推薦都要有確切的公司名與商品名，不可空泛。';
 
   document.getElementById('dpBox').textContent=prompt;
   document.getElementById('deepBlock').style.display='block';
@@ -2130,6 +2180,7 @@ const _origRenderResult=window.renderResult||null;
 // ── Export ────────────────────────────────────────────────────────────────────
 let expMode='html';
 let researchSummary='';
+let researchData=null; // structured {topPicks,plan,claimNote,alert,summary}
 
 function openExpModal(){
   if(!lastResult){alert('請先完成 AI 分析再匯出');return;}
@@ -2154,6 +2205,66 @@ function clearResearch(){
   document.getElementById('researchStatus').className='research-status';
   document.getElementById('researchSummaryBox').classList.remove('visible');
   researchSummary='';
+  researchData=null;
+}
+
+
+// ── Research structured data helpers ──────────────────────────────────────────
+function buildResearchReadable(d){
+  if(!d)return '';
+  var NL='\n';
+  var lines=[];
+  if(d.summary)lines.push(d.summary,'');
+  if(d.topPicks&&d.topPicks.length){
+    lines.push('【投保優先順序】');
+    d.topPicks.forEach(function(p){
+      lines.push('第'+(p.rank||'?')+'順位：'+(p.company||'')+' '+(p.product||'')+(p.monthlyCost?'（月費'+p.monthlyCost+'）':''));
+      if(p.gap)lines.push('  補強：'+p.gap);
+      if(p.reason)lines.push('  原因：'+p.reason);
+      if(p.pros)lines.push('  優點：'+p.pros);
+      if(p.cons)lines.push('  注意：'+p.cons);
+    });
+    lines.push('');
+  }
+  if(d.plan){
+    lines.push('【短中長期規劃】');
+    if(d.plan.short)lines.push('短期：'+d.plan.short);
+    if(d.plan.mid)lines.push('中期：'+d.plan.mid);
+    if(d.plan.long)lines.push('長期：'+d.plan.long);
+    lines.push('');
+  }
+  if(d.claimNote)lines.push('【理賠難易度】'+d.claimNote,'');
+  if(d.alert)lines.push('⚠️ '+d.alert);
+  return lines.join(NL);
+}
+
+function buildResearchCards(d){
+  if(!d||!d.topPicks)return '';
+  var h='';
+  if(d.summary)h+='<div style="font-size:.9rem;color:var(--ink);line-height:1.8;margin-bottom:12px;padding:10px 12px;background:rgba(44,62,122,.05);border-radius:8px">'+d.summary+'</div>';
+  h+='<div style="font-size:.78rem;font-weight:700;color:var(--deep);letter-spacing:.06em;margin-bottom:8px">🎯 投保優先順序（具體商品）</div>';
+  d.topPicks.forEach(function(p){
+    var rankColor=p.rank<=2?'#c0392b':p.rank<=4?'#e8a020':'#4a7c6f';
+    h+='<div style="margin-bottom:10px;padding:11px 14px;background:#fff;border:1px solid rgba(44,62,122,.15);border-left:4px solid '+rankColor+';border-radius:0 8px 8px 0">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">'
+      +'<span style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:10px;background:'+rankColor+';color:#fff">第'+(p.rank||'?')+'順位</span>'
+      +'<span style="font-size:.95rem;font-weight:700;color:var(--ink)">'+(p.company||'')+' '+(p.product||'')+'</span>'
+      +(p.monthlyCost?'<span style="margin-left:auto;font-size:.82rem;color:var(--muted)">月費 '+p.monthlyCost+'</span>':'')
+      +'</div>'
+      +(p.gap?'<div style="font-size:.8rem;color:var(--deep);margin-bottom:3px">補強：'+p.gap+'</div>':'')
+      +(p.reason?'<div style="font-size:.85rem;color:#4a4840;line-height:1.6;margin-bottom:3px">'+p.reason+'</div>':'')
+      +(p.pros?'<div style="font-size:.82rem;color:#1a5c35;line-height:1.6">✓ '+p.pros+'</div>':'')
+      +(p.cons?'<div style="font-size:.82rem;color:#7a2020;line-height:1.6">⚠ '+p.cons+'</div>':'')
+      +'</div>';
+  });
+  if(d.plan){
+    h+='<div style="font-size:.78rem;font-weight:700;color:var(--deep);letter-spacing:.06em;margin:12px 0 8px">📅 短中長期規劃</div>';
+    if(d.plan.short)h+='<div style="font-size:.85rem;line-height:1.7;margin-bottom:5px;padding:8px 11px;background:rgba(192,57,43,.06);border-radius:6px"><strong style="color:#7a2020">短期：</strong>'+d.plan.short+'</div>';
+    if(d.plan.mid)h+='<div style="font-size:.85rem;line-height:1.7;margin-bottom:5px;padding:8px 11px;background:rgba(232,160,32,.08);border-radius:6px"><strong style="color:#7a5c20">中期：</strong>'+d.plan.mid+'</div>';
+    if(d.plan.long)h+='<div style="font-size:.85rem;line-height:1.7;padding:8px 11px;background:rgba(74,124,111,.07);border-radius:6px"><strong style="color:#2d5e54">長期：</strong>'+d.plan.long+'</div>';
+  }
+  if(d.alert)h+='<div style="margin-top:10px;padding:9px 12px;background:rgba(192,57,43,.07);border-radius:7px;font-size:.83rem;color:#7a2020">⚠️ '+d.alert+'</div>';
+  return h;
 }
 
 async function processResearch(){
@@ -2173,7 +2284,7 @@ async function processResearch(){
     const policyCtx=(r.existingPolicies||[]).map(function(p){return p.company+' '+p.product+' ('+p.type+')';}).join('、');
     const gapCtx=(r.gaps||[]).map(function(g){return g.type;}).join('、');
 
-    const summaryPrompt=['你是台灣專業保險顧問，請將以下 Research 調查結果整理成結構化摘要，用於保單分析報告中。','現有保障：'+policyCtx,'保障缺口：'+gapCtx,'請輸出以下格式（繁體中文，簡潔專業）：','【推薦補強方案】（列出1~3個最適合方案，各含：方案名稱、月費估算、推薦原因、優點、缺點）','【理賠難易度評比】（各方案保險公司的理賠表現）','【停售風險提醒】（如有停售風險請標示）','【短期規劃建議】（1年內可執行的行動）','【中期規劃建議】（1~5年的保障調整方向）','【長期規劃建議】（5年以上的完整保障佈局）','【高CP值做法】（預算有限時最值得優先補強的一件事）','Research 原始結果：'+raw.substring(0,6000)].join('\n');
+    const summaryPrompt=['你是台灣專業保險顧問，請從以下 Research 調查結果中，萃取出「具體的投保建議商品」，整理成結構化資料。','現有保障：'+policyCtx,'保障缺口：'+gapCtx,'','只回覆JSON不加markdown。重點是把 Research 裡提到的「具體公司+商品名」抓出來，依投保優先順序排列：','{','"topPicks":[{"rank":1,"company":"公司名","product":"商品全名","gap":"補強哪個缺口","monthlyCost":"月費估算","reason":"推薦原因(30字內)","pros":"優點(30字內)","cons":"缺點或注意事項(30字內)"}],','"plan":{"short":"短期(1年內)該買的具體商品+月費","mid":"中期(1~3年)規劃","long":"長期(3年以上)規劃"},','"claimNote":"各推薦公司理賠難易度簡述",','"alert":"停售風險或市場提醒(無則空字串)",','"summary":"3句話總結整體補強策略"','}','','注意：topPicks 必須是 Research 裡真實出現的公司與商品名，依優先順序排 rank（1最優先）。若 Research 只給方向沒給商品名，company 填該類型主流公司，product 標註「需向業務確認商品」。最多列6個。','','Research 原始結果：'+raw.substring(0,7000)].join('\n');
 
     const resp=await fetch(endpoint,{
       method:'POST',
@@ -2182,12 +2293,31 @@ async function processResearch(){
     });
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
     const data=await resp.json();
-    researchSummary=data.content.map(function(b){return b.text||'';}).join('');
-
-    document.getElementById('researchSummaryContent').textContent=researchSummary;
+    var rawTxt=data.content.map(function(b){return b.text||'';}).join('');
+    var cleaned=rawTxt.replace(/```json|```/g,'').trim();
+    researchData=null;
+    try{
+      researchData=JSON.parse(cleaned);
+    }catch(pe){
+      // try to extract JSON object
+      var m=cleaned.match(/\{[\s\S]*\}/);
+      if(m){try{researchData=JSON.parse(m[0]);}catch(pe2){researchData=null;}}
+    }
+    if(researchData&&researchData.topPicks){
+      // Build readable summary from structured data
+      researchSummary=buildResearchReadable(researchData);
+      // Show structured cards in the box
+      document.getElementById('researchSummaryContent').innerHTML=buildResearchCards(researchData);
+    }else{
+      // fallback: use raw text
+      researchSummary=rawTxt;
+      document.getElementById('researchSummaryContent').textContent=researchSummary;
+    }
     document.getElementById('researchSummaryBox').classList.add('visible');
     st.className='research-status ok';
-    st.textContent='✅ 摘要完成，已整合進報告';
+    st.textContent='✅ 已萃取具體投保建議，整合進報告';
+    // Re-render result so topPicks show prominently
+    if(lastResult){renderResult(lastResult,'（已整合 Research）',MODELS.find(function(m){return m.id===selectedModel;})?MODELS.find(function(m){return m.id===selectedModel;}).name:selectedModel);goStep(3);}
   }catch(e){
     st.className='research-status';
     st.textContent='⚠️ 摘要失敗：'+e.message;
@@ -2225,114 +2355,131 @@ function buildPPTHTML(r){
   var cur=familyMembers.find(function(m){return m.id===activeMemberId;});
   var memberName=cur?(cur.avatar+' '+cur.name):'本人';
   var score=r.score||0;
-  var scoreColor=score>=70?'#27ae60':score>=40?'#c8a96e':'#c0392b';
   var now=new Date().toLocaleDateString('zh-TW');
   var age=document.getElementById('pAge').value;
   var plans=buildTimePlan(r);
+  var hasResearch=researchData&&researchData.topPicks&&researchData.topPicks.length;
+  // Warm earth palette
+  var C={cream:'#faf3e6',sand:'#f0e2c8',tan:'#e3c99a',clay:'#c89456',rust:'#b5683c',olive:'#7d8456',sage:'#a3a878',ink:'#3a3228',brown:'#6b4f3a',gold:'#d4a85a',softred:'#c0633f',green:'#6f8c5a'};
 
   var css='<style>'
     +'*{box-sizing:border-box;margin:0;padding:0;}'
-    +'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#1a1a2e;padding:12px;font-size:18px;}'
-    +'.slide{width:100%;max-width:680px;min-height:420px;margin:0 auto 14px;border-radius:14px;padding:32px 30px;position:relative;box-shadow:0 6px 28px rgba(0,0,0,.35);}'
-    +'.sn{position:absolute;top:12px;right:16px;font-size:.7rem;color:rgba(255,255,255,.35);}'
-    +'.st{font-size:1.2rem;font-weight:700;color:#c8a96e;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(200,169,110,.25);}'
-    +'.gap-item{margin-bottom:11px;padding:11px 13px;border-radius:8px;border-left:4px solid #e74c3c;background:rgba(0,0,0,.2);}'
-    +'.rec-item{margin-bottom:11px;padding:11px 13px;background:rgba(255,255,255,.07);border-radius:8px;display:flex;gap:10px;align-items:flex-start;}'
-    +'.pri-badge{font-size:.75rem;padding:3px 9px;border-radius:10px;white-space:nowrap;margin-top:2px;flex-shrink:0;}'
-    +'@media print{body{background:#fff;padding:0;}.slide{margin:0;border-radius:0;box-shadow:none;min-height:auto;padding:24px;page-break-after:always;}}'
+    +'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#e8dcc4;padding:14px;font-size:18px;}'
+    +'.slide{width:100%;max-width:720px;min-height:440px;margin:0 auto 16px;border-radius:16px;padding:0;position:relative;box-shadow:0 6px 24px rgba(107,79,58,.18);overflow:hidden;background:'+C.cream+';}'
+    +'.s-head{padding:22px 30px 16px;display:flex;align-items:center;gap:12px;}'
+    +'.s-head .ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}'
+    +'.s-head .ht{font-size:1.3rem;font-weight:800;}'
+    +'.s-head .hs{font-size:.82rem;opacity:.7;margin-top:1px;}'
+    +'.s-body{padding:4px 30px 28px;}'
+    +'.sn{position:absolute;bottom:14px;right:20px;font-size:.72rem;color:'+C.clay+';opacity:.6;}'
+    +'.card{background:#fff;border-radius:11px;padding:14px 16px;margin-bottom:11px;box-shadow:0 2px 8px rgba(107,79,58,.08);}'
+    +'.pill{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 11px;border-radius:11px;color:#fff;}'
+    +'@media print{body{background:#fff;padding:0;}.slide{margin:0;border-radius:0;box-shadow:none;page-break-after:always;min-height:auto;}}'
     +'</style>';
 
-  function slide(num,title,bg,content){
-    return '<div class="slide" style="background:'+bg+'"><div class="sn">'+num+'</div><div class="st">'+title+'</div><div>'+content+'</div></div>';
-  }
+  function slide(num,inner){return '<div class="slide">'+inner+'<div class="sn">'+num+'</div></div>';}
+  function head(icoBg,ico,title,sub){return '<div class="s-head"><div class="ico" style="background:'+icoBg+'">'+ico+'</div><div><div class="ht" style="color:'+C.ink+'">'+title+'</div>'+(sub?'<div class="hs" style="color:'+C.brown+'">'+sub+'</div>':'')+'</div></div>';}
 
   var slides=[];
 
-  // S1 Cover
-  slides.push(slide(1,'保單保障分析報告','linear-gradient(135deg,#1a1a2e,#2c2c4a)',
-    '<div style="text-align:center;padding:20px 0">'
-    +'<div style="font-size:3.2rem;margin-bottom:12px">'+String.fromCodePoint(0x1F6E1)+'</div>'
-    +'<div style="font-size:1.6rem;color:#c8a96e;font-weight:700;margin-bottom:8px">'+memberName+'</div>'
-    +'<div style="font-size:1rem;color:#a09880">'+now+(age?' · '+age+'歲':'')+'</div>'
+  // S1 Cover — warm gradient
+  slides.push('<div class="slide" style="background:linear-gradient(140deg,'+C.sand+' 0%,'+C.tan+' 55%,'+C.clay+' 100%);min-height:440px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px">'
+    +'<div style="font-size:3.4rem;margin-bottom:14px">🛡️</div>'
+    +'<div style="font-size:1.9rem;font-weight:800;color:'+C.brown+';margin-bottom:8px">保單健檢與補強建議</div>'
+    +'<div style="width:60px;height:3px;background:'+C.rust+';border-radius:2px;margin:10px 0 16px"></div>'
+    +'<div style="font-size:1.3rem;font-weight:700;color:'+C.ink+';margin-bottom:6px">'+memberName+'</div>'
+    +'<div style="font-size:.95rem;color:'+C.brown+';opacity:.8">'+now+(age?' · '+age+'歲':'')+'</div>'
+    +'<div class="sn">1</div></div>');
+
+  // S2 現況快照 — score + urgent, two-tone
+  var sc=score>=70?C.green:score>=40?C.gold:C.softred;
+  slides.push(slide(2,
+    head(C.sand,'📊','保障現況快照','目前的整體保障狀態')
+    +'<div class="s-body">'
+    +'<div style="display:flex;gap:16px;align-items:center;margin-bottom:14px">'
+    +'<div style="flex-shrink:0;width:110px;height:110px;border-radius:50%;background:'+sc+';display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px '+sc+'44"><div style="font-size:2.6rem;font-weight:900;line-height:1">'+score+'</div><div style="font-size:.72rem;opacity:.85">/ 100 分</div></div>'
+    +'<div style="flex:1;font-size:1rem;color:'+C.ink+';line-height:1.7">'+(r.scoreDesc||'')+'</div>'
+    +'</div>'
+    +(r.urgent?'<div style="padding:13px 16px;background:#fbeae6;border-radius:10px;border-left:4px solid '+C.softred+'"><div style="font-size:.78rem;font-weight:700;color:'+C.softred+';margin-bottom:4px">🚨 最優先處理</div><div style="font-size:.98rem;color:'+C.brown+';line-height:1.65">'+r.urgent+'</div></div>':'')
     +'</div>'));
 
-  // S2 Score
-  slides.push(slide(2,'保障完整度評分',scoreColor,
-    '<div style="text-align:center">'
-    +'<div style="font-size:5.5rem;font-weight:900;color:#fff;line-height:1">'+score+'</div>'
-    +'<div style="font-size:1.2rem;color:rgba(255,255,255,.75);margin:8px 0 16px">/ 100 分</div>'
-    +'<div style="font-size:1rem;color:#fff;line-height:1.75;max-width:400px;margin:0 auto">'+(r.scoreDesc||'')+'</div>'
-    +(r.urgent?'<div style="margin-top:16px;padding:12px 16px;background:rgba(0,0,0,.22);border-radius:9px;font-size:.95rem;color:#fff;text-align:left"><strong>最緊急：</strong>'+r.urgent+'</div>':'')
-    +'</div>'));
-
-  // S3 Key Points
-  var kpHtml=(r.keyPoints||r.summary||[]).map(function(k){return '<div style="padding:10px 14px;background:rgba(255,255,255,.07);border-radius:8px;font-size:1rem;line-height:1.75;margin-bottom:9px;color:#fff">◆ '+k+'</div>';}).join('');
-  slides.push(slide(3,'重點摘要','#1e2a3a',kpHtml));
-
-  // S4 Pros
-  var prosHtml=(r.pros||[]).slice(0,4).map(function(p){
-    var t=typeof p==='object'?p.title:p;
-    var d=typeof p==='object'?p.detail:'';
-    return '<div style="margin-bottom:10px;padding:11px 13px;background:rgba(39,174,96,.12);border-left:4px solid #27ae60;border-radius:0 8px 8px 0"><div style="font-weight:700;color:#6ec98a;font-size:1rem">✓ '+t+'</div>'+(d?'<div style="font-size:.88rem;color:rgba(255,255,255,.75);margin-top:4px;line-height:1.7">'+d+'</div>':'')+'</div>';
+  // S3 缺什麼 — gap chips in a warm grid
+  var gapItems=(r.gaps||[]).slice(0,6).map(function(g){
+    var sev=g.severity||'medium';var col=sev==='high'?C.softred:sev==='medium'?C.gold:C.olive;var ic=sev==='high'?'🔴':sev==='medium'?'🟡':'🟢';
+    return '<div class="card" style="border-left:4px solid '+col+';margin-bottom:9px"><div style="font-size:1rem;font-weight:700;color:'+C.ink+'">'+ic+' '+(g.type||g)+'</div>'+(g.headline?'<div style="font-size:.86rem;color:'+C.brown+';line-height:1.6;margin-top:3px">'+g.headline+'</div>':'')+'</div>';
   }).join('');
-  slides.push(slide(4,'保障優點','#1e2a3a',prosHtml));
+  slides.push(slide(3,
+    head('#f0d8d2','⚠️','目前缺少的保障','這些項目需要補強')
+    +'<div class="s-body">'+gapItems+'</div>'));
 
-  // S5 Gaps
-  var gapsHtml=(r.gaps||[]).slice(0,4).map(function(g){
-    var sev=g.severity||'medium';
-    var col=sev==='high'?'#e74c3c':sev==='medium'?'#f39c12':'#27ae60';
-    var ic=sev==='high'?'高':sev==='medium'?'中':'低';
-    return '<div class="gap-item" style="border-left-color:'+col+'"><div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:4px">'+(sev==='high'?'🔴':sev==='medium'?'🟡':'🟢')+' '+(g.type||g)+'</div><div style="font-size:.88rem;color:rgba(255,255,255,.75);line-height:1.7">'+(g.headline||g.reason||'')+'</div>'+(g.action?'<div style="font-size:.85rem;color:#c8a96e;margin-top:5px">'+g.action+'</div>':'')+'</div>';
-  }).join('');
-  slides.push(slide(5,'保障缺口','#1e2a3a',gapsHtml));
+  // S4+ ★ Per-product recommendation slides (the core)
+  if(hasResearch){
+    // Priority overview slide
+    var ovItems=researchData.topPicks.slice(0,6).map(function(p){
+      var rc=p.rank<=2?C.softred:p.rank<=4?C.gold:C.olive;
+      return '<div style="display:flex;align-items:center;gap:11px;padding:10px 13px;background:#fff;border-radius:10px;margin-bottom:8px;box-shadow:0 2px 6px rgba(107,79,58,.07)">'
+        +'<div style="width:32px;height:32px;border-radius:50%;background:'+rc+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">'+(p.rank||'?')+'</div>'
+        +'<div style="flex:1"><div style="font-size:.96rem;font-weight:700;color:'+C.ink+'">'+(p.company||'')+' '+(p.product||'')+'</div><div style="font-size:.8rem;color:'+C.brown+'">'+(p.gap||'')+'</div></div>'
+        +(p.monthlyCost?'<div style="font-size:.88rem;font-weight:700;color:'+rc+';flex-shrink:0">'+p.monthlyCost+'</div>':'')
+        +'</div>';
+    }).join('');
+    slides.push(slide(4,
+      head('#f5e6c8','🎯','建議投保優先順序','依風險與CP值排名，可逐步投保')
+      +'<div class="s-body">'+ovItems+'</div>'));
 
-  // S6 Recs
-  var recsHtml=(r.recommendations||[]).slice(0,4).map(function(rec){
-    var t=typeof rec==='object'?rec.title:rec;
-    var pri=typeof rec==='object'?rec.priority:'soon';
-    var cost=typeof rec==='object'?rec.estimatedCost:'';
-    var pCol=pri==='urgent'?'#e74c3c':pri==='soon'?'#f39c12':'#27ae60';
-    var pLbl=pri==='urgent'?'緊急':pri==='soon'?'近期':'未來';
-    return '<div class="rec-item"><span class="pri-badge" style="background:'+pCol+';color:#fff">'+pLbl+'</span><div><div style="font-size:1rem;font-weight:600;color:#fff">'+t+'</div>'+(cost?'<div style="font-size:.85rem;color:rgba(255,255,255,.6)">約 '+cost+'/月</div>':'')+'</div></div>';
-  }).join('');
-  slides.push(slide(6,'補強建議','#1e2a3a',recsHtml));
-
-  // S7 Plan
-  slides.push(slide(7,'短中長期規劃','#1e2a3a',
-    '<div style="display:flex;flex-direction:column;gap:10px">'
-    +'<div style="padding:12px 15px;background:rgba(192,57,43,.15);border-radius:9px"><div style="font-size:.85rem;font-weight:700;color:#e74c3c;margin-bottom:5px">🔴 短期（1年內）</div><div style="font-size:.95rem;color:rgba(255,255,255,.85);line-height:1.75">'+plans.short+'</div></div>'
-    +'<div style="padding:12px 15px;background:rgba(232,160,32,.12);border-radius:9px"><div style="font-size:.85rem;font-weight:700;color:#f39c12;margin-bottom:5px">🟡 中期（1~5年）</div><div style="font-size:.95rem;color:rgba(255,255,255,.85);line-height:1.75">'+plans.mid+'</div></div>'
-    +'<div style="padding:12px 15px;background:rgba(39,174,96,.12);border-radius:9px"><div style="font-size:.85rem;font-weight:700;color:#27ae60;margin-bottom:5px">🟢 長期（5年以上）</div><div style="font-size:.95rem;color:rgba(255,255,255,.85);line-height:1.75">'+plans.long+'</div></div>'
-    +'</div>'));
-
-  // S8 Research
-  if(researchSummary){
-    slides.push(slide(8,'市場補強方案（Research 結果）','#1e2a3a',
-      '<div style="font-size:.9rem;color:rgba(255,255,255,.85);line-height:1.85;white-space:pre-wrap;max-height:300px;overflow-y:auto">'+researchSummary.substring(0,1200)+'</div>'));
+    // Individual product detail slides (top 4)
+    researchData.topPicks.slice(0,4).forEach(function(p,i){
+      var rc=p.rank<=2?C.softred:p.rank<=4?C.gold:C.olive;
+      slides.push(slide(5+i,
+        head(rc+'22','💡','第 '+(p.rank||'?')+' 順位推薦',(p.gap||'')+(p.monthlyCost?' · 月費 '+p.monthlyCost:''))
+        +'<div class="s-body">'
+        +'<div style="font-size:1.25rem;font-weight:800;color:'+C.brown+';margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid '+C.tan+'">'+(p.company||'')+'<br>'+(p.product||'')+'</div>'
+        +(p.reason?'<div class="card" style="background:'+C.cream+'"><div style="font-size:.78rem;font-weight:700;color:'+C.clay+';margin-bottom:4px">推薦原因</div><div style="font-size:.95rem;color:'+C.ink+';line-height:1.7">'+p.reason+'</div></div>':'')
+        +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+        +(p.pros?'<div class="card" style="flex:1;min-width:200px;background:#eef3e8;border-top:3px solid '+C.green+'"><div style="font-size:.78rem;font-weight:700;color:'+C.green+';margin-bottom:4px">✅ 優點</div><div style="font-size:.9rem;color:'+C.ink+';line-height:1.7">'+p.pros+'</div></div>':'')
+        +(p.cons?'<div class="card" style="flex:1;min-width:200px;background:#f6ece4;border-top:3px solid '+C.rust+'"><div style="font-size:.78rem;font-weight:700;color:'+C.rust+';margin-bottom:4px">⚠️ 注意事項</div><div style="font-size:.9rem;color:'+C.ink+';line-height:1.7">'+p.cons+'</div></div>':'')
+        +'</div>'
+        +'</div>'));
+    });
+  } else {
+    slides.push(slide(4,
+      head('#f5e6c8','🎯','建議投保','尚未執行市場調查')
+      +'<div class="s-body"><div style="padding:18px;background:'+C.cream+';border-radius:11px;font-size:1rem;color:'+C.brown+';line-height:1.85;text-align:center">執行 Claude.ai Research 並貼回系統後，<br>這裡會列出指名道姓的具體投保建議，<br>包含公司、商品、月費、優缺點與推薦原因。</div></div>'));
   }
 
-  // S Family
-  var sBase=researchSummary?9:8;
-  var scoreLevel=score>=70?'整體保障不錯，基本保障已有':score>=40?'還好，有幾個地方需要補強':'需要注意，保障有些不夠';
-  slides.push(slide(sBase,'給家人的說明版','linear-gradient(135deg,#2d5e54,#1a3a32)',
-    '<div style="color:#fff;font-size:1rem;line-height:2">'
-    +'<p><strong style="color:#a0d4c0">整體狀況：</strong>'+scoreLevel+'（'+score+' 分）</p>'
-    +(r.urgent?'<p style="margin-top:8px"><strong style="color:#a0d4c0">最需要做：</strong>'+r.urgent+'</p>':'')
-    +(r.overallAdvice?'<div style="margin-top:14px;padding:12px 14px;background:rgba(255,255,255,.1);border-radius:8px;font-size:.95rem;line-height:1.85">'+r.overallAdvice+'</div>':'')
+  // S 短中長期 — three warm columns
+  var nextN=slides.length+1;
+  var planShort=hasResearch&&researchData.plan&&researchData.plan.short?researchData.plan.short:plans.short;
+  var planMid=hasResearch&&researchData.plan&&researchData.plan.mid?researchData.plan.mid:plans.mid;
+  var planLong=hasResearch&&researchData.plan&&researchData.plan.long?researchData.plan.long:plans.long;
+  slides.push(slide(nextN,
+    head('#e8f0e4','📅','短中長期規劃','沒辦法一次買齊時的順序')
+    +'<div class="s-body">'
+    +'<div class="card" style="background:#fbeae6;border-left:4px solid '+C.softred+'"><div style="font-size:.82rem;font-weight:700;color:'+C.softred+';margin-bottom:4px">🔴 短期（1年內）</div><div style="font-size:.92rem;color:'+C.ink+';line-height:1.7">'+planShort+'</div></div>'
+    +'<div class="card" style="background:#fcf2dc;border-left:4px solid '+C.gold+'"><div style="font-size:.82rem;font-weight:700;color:'+C.clay+';margin-bottom:4px">🟡 中期（1~3年）</div><div style="font-size:.92rem;color:'+C.ink+';line-height:1.7">'+planMid+'</div></div>'
+    +'<div class="card" style="background:#e8f0e4;border-left:4px solid '+C.green+'"><div style="font-size:.82rem;font-weight:700;color:'+C.green+';margin-bottom:4px">🟢 長期（3年以上）</div><div style="font-size:.92rem;color:'+C.ink+';line-height:1.7">'+planLong+'</div></div>'
     +'</div>'));
 
-  // S Professional
-  slides.push(slide(sBase+1,'給業務員的專業分析版','linear-gradient(135deg,#1e2d6a,#0f1a40)',
-    buildProfSlide(r)));
+  // S 現有保單（補充）
+  var polItems=(r.existingPolicies||[]).slice(0,6).map(function(p){
+    return '<div style="display:flex;align-items:center;gap:9px;padding:9px 12px;background:#fff;border-radius:9px;margin-bottom:7px;box-shadow:0 1px 5px rgba(107,79,58,.06)"><span style="font-size:.72rem;padding:2px 8px;border-radius:7px;background:'+C.sand+';color:'+C.brown+';flex-shrink:0">'+(p.type||'')+'</span><span style="font-size:.9rem;color:'+C.ink+';flex:1">'+(p.company||'')+' '+(p.product||'')+'</span>'+(p.paidUp==='是'?'<span style="font-size:.72rem;color:'+C.green+'">✓繳清</span>':'')+'</div>';
+  }).join('');
+  slides.push(slide(slides.length+1,
+    head('#ece2cc','📄','目前已有的保單','現況保障，作為補充參考')
+    +'<div class="s-body">'+polItems+(r.totalDeathBenefit?'<div style="margin-top:8px;padding:10px 13px;background:'+C.cream+';border-radius:9px;font-size:.88rem;color:'+C.brown+'">💰 身故保障合計：'+r.totalDeathBenefit+'</div>':'')+'</div>'));
 
-  var allSlides=slides.join('');
-  var navHtml='<div style="text-align:center;padding:14px 0 20px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">'
-    +'<a href="javascript:history.back()" style="padding:8px 18px;border:1px solid rgba(255,255,255,.2);border-radius:20px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);text-decoration:none;font-size:.85rem">← 返回</a>'
-    +'<span style="color:rgba(255,255,255,.4);font-size:.85rem;padding:8px 10px">共 '+slides.length+' 張</span>'
-    +'<button onclick="window.print()" style="padding:8px 18px;border:1px solid rgba(255,255,255,.2);border-radius:20px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);cursor:pointer;font-size:.85rem;font-family:inherit">🖨️ 列印/PDF</button>'
+  // Final slide
+  slides.push('<div class="slide" style="background:linear-gradient(140deg,'+C.tan+','+C.clay+');min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px">'
+    +'<div style="font-size:2rem;margin-bottom:12px">🤝</div>'
+    +'<div style="font-size:1.2rem;font-weight:700;color:'+C.brown+';line-height:1.7;max-width:420px">'+(r.overallAdvice||'建議攜此報告諮詢合格保險顧問，依預算逐步完善保障。')+'</div>'
+    +'<div class="sn" style="color:#fff;opacity:.7">'+(slides.length+1)+'</div></div>');
+
+  var navHtml='<div style="text-align:center;padding:8px 0 18px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">'
+    +'<span style="color:'+C.brown+';font-size:.85rem;padding:8px">共 '+slides.length+' 張投影片</span>'
+    +'<button onclick="window.print()" style="padding:8px 20px;border:1px solid '+C.clay+';border-radius:20px;background:'+C.cream+';color:'+C.brown+';cursor:pointer;font-size:.85rem;font-family:inherit">🖨️ 列印 / 存 PDF</button>'
     +'</div>';
 
-  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保單分析簡報</title>'+css+'</head><body>'+allSlides+navHtml+'<div style="text-align:center;padding:10px 0 20px;color:rgba(255,255,255,.3);font-size:.75rem">本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理</div></body></html>';
+  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保單補強簡報</title>'+css+'</head><body>'+slides.join('')+navHtml+'</body></html>';
 }
 
 function buildTimePlan(r){
@@ -2382,76 +2529,52 @@ function buildReportText(r){
   var cur=familyMembers.find(function(m){return m.id===activeMemberId;});
   var memberName=cur?(cur.avatar+' '+cur.name):'本人';
   var age=document.getElementById('pAge').value;
-  var gender=document.getElementById('pGender').value;
   var now=new Date().toLocaleDateString('zh-TW');
   var NL='\n';
-  var SEP='═'.repeat(48);
+  var SEP='═'.repeat(46);
   var plans=buildTimePlan(r);
-  var lines=[
-    '🛡️ 保單智能分析報告',
-    '分析對象：'+memberName+(age?'  年齡：'+age+'歲':'')+(gender?'  性別：'+gender:''),
-    '分析日期：'+now,
-    SEP,'',
-    '【保障完整度】 '+( r.score||0)+' / 100 分',
-    r.scoreDesc||'','',
-    '🚨 最優先處理：'+(r.urgent||'—'),'',
-    r.totalDeathBenefit?'💰 身故保障合計：'+r.totalDeathBenefit:'',
-    r.budgetPriority?'⭐ 預算有限最值得補：'+r.budgetPriority:'',
-    r.overallAdvice?'💬 整體建議：'+r.overallAdvice:'','',
-  ];
-  if((r.marketAlerts||[]).length){
-    lines.push('【2024 市場重要變化】');
-    (r.marketAlerts||[]).forEach(function(a){lines.push('⚡ '+a);});
-    lines.push('');
+  var hasResearch=researchData&&researchData.topPicks&&researchData.topPicks.length;
+  var L=[];
+  L.push('🛡️ 保單健檢與補強建議');
+  L.push('分析對象：'+memberName+(age?'  '+age+'歲':'')+'  ｜  '+now);
+  L.push(SEP,'');
+  L.push('【保障現況】'+(r.score||0)+' / 100 分');
+  L.push(r.scoreDesc||'');
+  L.push('🚨 最優先：'+(r.urgent||'—'),'');
+  L.push('【目前缺少的保障】');
+  (r.gaps||[]).forEach(function(g){var sev=g.severity==='high'?'🔴':g.severity==='medium'?'🟡':'🟢';L.push(sev+' '+(g.type||g)+'：'+(g.headline||''));});
+  L.push('');
+  L.push(SEP);
+  L.push('★ 建議投保（具體商品 × 優先順序）');
+  L.push(SEP);
+  if(hasResearch){
+    researchData.topPicks.forEach(function(p){
+      L.push('');
+      L.push('第'+(p.rank||'?')+'順位　'+(p.company||'')+' '+(p.product||'')+(p.monthlyCost?'　月費'+p.monthlyCost:''));
+      if(p.gap)L.push('  補強：'+p.gap);
+      if(p.reason)L.push('  推薦原因：'+p.reason);
+      if(p.pros)L.push('  ✅ 優點：'+p.pros);
+      if(p.cons)L.push('  ⚠️ 注意：'+p.cons);
+    });
+  }else{
+    L.push('（尚未執行 Research，請到 Claude.ai 執行市場調查後貼回，即可取得指名道姓的具體商品建議）');
   }
-  lines.push('【重點摘要】');
-  (r.keyPoints||r.summary||[]).forEach(function(s){lines.push('◆ '+s);});
-  lines.push('');
-  lines.push('【保障優點】');
-  (r.pros||[]).forEach(function(p){var t=typeof p==='object'?p.title:p;var d=typeof p==='object'?p.detail:'';lines.push('✓ '+t+(d?NL+'  '+d:''));});
-  lines.push('');
-  lines.push('【保障缺口】');
-  (r.gaps||[]).forEach(function(g){var sev=g.severity==='high'?'🔴高':g.severity==='medium'?'🟡中':'🟢低';lines.push('• '+(g.type||g)+'（'+sev+'）：'+(g.headline||g.reason||''));if(g.detail)lines.push('  '+g.detail);if(g.action)lines.push('  👉 '+g.action);});
-  lines.push('');
-  lines.push('【補強建議】');
-  (r.recommendations||[]).forEach(function(rec,i){var t=typeof rec==='object'?rec.title:rec;var cost=typeof rec==='object'?rec.estimatedCost:'';var reason=typeof rec==='object'?rec.reason:'';var action=typeof rec==='object'?rec.action:'';var cp=typeof rec==='object'?rec.cpValue:'';lines.push((i+1)+'. '+t+(cost?' 約'+cost+'/月':''));if(reason)lines.push('   為什麼：'+reason);if(action)lines.push('   👉 第一步：'+action);if(cp)lines.push('   CP值：'+cp);});
-  lines.push('');
-  lines.push('【現有保單清單】');
-  (r.existingPolicies||[]).forEach(function(p){lines.push('• '+(p.company||'')+' '+(p.product||'')+'（'+(p.type||'')+'）保額 '+(p.amount||'—')+(p.paidUp==='是'?' 【已繳清】':'')+(p.policyAge?' '+p.policyAge:''));if(p.oneLineSummary)lines.push('  '+p.oneLineSummary);if(p.warning)lines.push('  ⚠️ '+p.warning);if(p.copyClaimNote)lines.push('  📋 '+p.copyClaimNote);});
-  lines.push('');
-  lines.push('【短中長期規劃】');
-  lines.push('🔴 短期（1年內）：'+plans.short);
-  lines.push('🟡 中期（1~5年）：'+plans.mid);
-  lines.push('🟢 長期（5年以上）：'+plans.long);
-  lines.push('');
-  if(researchSummary){
-    lines.push(SEP);
-    lines.push('【Research 市場調查摘要】');
-    lines.push(researchSummary);
-    lines.push('');
-  }
-  lines.push(SEP);
-  lines.push('【Research Prompt（備用）】');
-  lines.push(document.getElementById('dpBox')?document.getElementById('dpBox').textContent:'');
-  lines.push('');
-  lines.push(SEP);
-  lines.push('---------- 給家人的說明版 ----------');
-  var scoreLevel=( r.score||0)>=70?'整體保障不錯':( r.score||0)>=40?'還好，有幾個地方需補強':'需要注意，保障有些不夠';
-  lines.push('整體狀況：'+scoreLevel+'（'+(r.score||0)+' 分）');
-  lines.push('最需要做的事：'+(r.urgent||'—'));
-  if(r.overallAdvice)lines.push('整體建議：'+r.overallAdvice);
-  lines.push('');
-  lines.push('---------- 給業務員的專業版 ----------');
-  lines.push('保障完整度：'+(r.score||0)+'/100 分');
-  (r.existingPolicies||[]).forEach(function(p){lines.push('• '+(p.company||'')+' '+(p.product||'')+'（'+(p.type||'）')+' 保額 '+(p.amount||'—'));});
-  lines.push('');
-  lines.push('缺口：');
-  (r.gaps||[]).forEach(function(g){lines.push((g.severity==='high'?'[高]':'[中]')+' '+(g.type||'')+'：'+(g.headline||''));});
-  lines.push('');
-  lines.push(SEP);
-  lines.push('本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理。');
-  lines.push('實際理賠依各保單條款為準，建議諮詢合格保險顧問。');
-  return lines.filter(function(l){return l!==null&&l!==undefined;}).join(NL);
+  L.push('');
+  L.push('【短中長期規劃】');
+  L.push('🔴 短期(1年內)：'+(hasResearch&&researchData.plan?researchData.plan.short||plans.short:plans.short));
+  L.push('🟡 中期(1~3年)：'+(hasResearch&&researchData.plan?researchData.plan.mid||plans.mid:plans.mid));
+  L.push('🟢 長期(3年+)：'+(hasResearch&&researchData.plan?researchData.plan.long||plans.long:plans.long));
+  L.push('');
+  if(hasResearch&&researchData.claimNote){L.push('【理賠難易度】'+researchData.claimNote,'');}
+  L.push(SEP);
+  L.push('【目前已有的保單】（補充參考）');
+  (r.existingPolicies||[]).forEach(function(p){L.push('• '+(p.company||'')+' '+(p.product||'')+'（'+(p.type||'')+'）'+(p.amount?'保額'+p.amount:'')+(p.paidUp==='是'?' 已繳清':''));if(p.oneLineSummary)L.push('  '+p.oneLineSummary);});
+  if(r.totalDeathBenefit)L.push('💰 身故保障合計：'+r.totalDeathBenefit);
+  L.push('');
+  L.push(SEP);
+  L.push('本報告由保單智能分析系統產生，個資已遮蔽。');
+  L.push('實際商品與費率以各保險公司公告為準，建議向業務員確認後投保。');
+  return L.filter(function(x){return x!==null&&x!==undefined;}).join(NL);
 }
 
 function buildReportHTML(r){
@@ -2463,116 +2586,93 @@ function buildReportHTML(r){
   var score=r.score||0;
   var scoreColor=score>=70?'#27ae60':score>=40?'#c8a96e':'#c0392b';
   var plans=buildTimePlan(r);
-  var dpText=document.getElementById('dpBox')?document.getElementById('dpBox').textContent.replace(/</g,'&lt;').replace(/>/g,'&gt;'):'';
+  var hasResearch=researchData&&researchData.topPicks&&researchData.topPicks.length;
 
-  function sec(title){return '<h2 style="font-size:1rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#7a7060;border-bottom:2px solid #d4c9b0;padding-bottom:7px;margin:28px 0 14px">'+title+'</h2>';}
-  function proCard(p){var t=typeof p==='object'?p.title:p;var d=typeof p==='object'?p.detail:'';return '<div style="margin-bottom:12px;padding:14px 16px;background:rgba(39,174,96,.08);border-left:4px solid #27ae60;border-radius:0 8px 8px 0"><div style="font-weight:700;color:#1a5c35;font-size:1.05rem;margin-bottom:4px">✓ '+t+'</div>'+(d?'<div style="font-size:.95rem;color:#2d5e3a;line-height:1.8">'+d+'</div>':'')+'</div>';}
-  function gapCard(g){var sev=g.severity||'medium';var col=sev==='high'?'#c0392b':sev==='medium'?'#e8a020':'#4a7c6f';var ic=sev==='high'?'🔴':sev==='medium'?'🟡':'🟢';return '<div style="margin-bottom:14px;padding:14px 16px;border-left:4px solid '+col+';background:rgba(0,0,0,.03);border-radius:0 8px 8px 0"><div style="font-weight:700;font-size:1.05rem;color:#1a1a2e;margin-bottom:5px">'+ic+' '+(g.type||g)+'</div>'+(g.headline?'<div style="font-size:1rem;color:#333;margin-bottom:4px;line-height:1.7">'+g.headline+'</div>':'')+(g.detail?'<div style="font-size:.9rem;color:#555;line-height:1.8;margin-bottom:6px">'+g.detail+'</div>':'')+(g.action?'<div style="font-size:.95rem;color:#2c3e7a;font-weight:600">👉 '+g.action+'</div>':'')+'</div>';}
-  function recCard(rec,i){var t=typeof rec==='object'?rec.title:rec;var pri=typeof rec==='object'?rec.priority:'soon';var reason=typeof rec==='object'?rec.reason:'';var action=typeof rec==='object'?rec.action:'';var cost=typeof rec==='object'?rec.estimatedCost:'';var cpv=typeof rec==='object'?rec.cpValue:'';var timeN=typeof rec==='object'?rec.timeNow:'';var pCol=pri==='urgent'?'#c0392b':pri==='soon'?'#e8a020':'#4a7c6f';var pLbl=pri==='urgent'?'🔴 緊急':pri==='soon'?'🟡 近期':'🟢 未來';return '<div style="margin-bottom:14px;padding:14px 16px;background:#f9f6f0;border-radius:9px;border:1px solid #e8e0d0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap"><span style="font-size:.82rem;font-weight:700;color:'+pCol+'">'+pLbl+'</span><span style="font-size:1.05rem;font-weight:700;color:#1a1a2e">'+t+'</span>'+(cost?'<span style="margin-left:auto;font-size:.9rem;color:#7a7060">約 '+cost+'/月</span>':'')+'</div>'+(reason?'<div style="font-size:.92rem;color:#4a4840;margin-bottom:6px;line-height:1.75"><strong>為什麼：</strong>'+reason+'</div>':'')+(action?'<div style="font-size:.95rem;color:#2c3e7a;font-weight:600;margin-bottom:4px">👉 第一步：'+action+'</div>':'')+(cpv?'<div style="font-size:.82rem;color:#7a7060;margin-top:3px">⭐ CP值：'+cpv+'</div>':'')+(timeN?'<div style="font-size:.82rem;color:#2c3e7a;margin-top:3px">⏰ '+timeN+'</div>':'')+'</div>';}
-  function polCard(p){var paidBadge=p.paidUp==='是'?'<span style="font-size:.75rem;padding:2px 7px;border-radius:7px;background:rgba(39,174,96,.12);color:#1a7a44;border:1px solid rgba(39,174,96,.2)">✓ 已繳清</span>':'';var ageBadge=p.policyAge?'<span style="font-size:.75rem;padding:2px 7px;border-radius:7px;background:rgba(192,57,43,.08);color:#7a2020">'+p.policyAge+'</span>':'';var statusBadge=p.status?'<span style="font-size:.75rem;padding:2px 7px;border-radius:7px;background:rgba(44,62,122,.1);color:#2c3e7a">'+p.status+'</span>':'';var warn=p.warning?'<div style="margin-top:8px;padding:8px 12px;background:rgba(192,57,43,.07);border-left:3px solid #c0392b;border-radius:0 5px 5px 0;font-size:.88rem;color:#7a2020;line-height:1.65">⚠️ '+p.warning+'</div>':'';var copy=p.copyClaimNote?'<div style="font-size:.82rem;color:#2c3e7a;margin-top:4px">📋 '+p.copyClaimNote+'</div>':'';return '<div style="margin-bottom:12px;padding:14px 16px;background:#f9f6f0;border-radius:9px;border:1px solid #e8e0d0"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap"><span style="font-size:.78rem;padding:2px 8px;border-radius:7px;background:rgba(39,174,96,.12);color:#1a7a44">'+(p.type||'')+'</span><span style="font-size:1rem;font-weight:700">'+(p.company||'')+' '+(p.product||'')+'</span>'+paidBadge+ageBadge+statusBadge+'</div><div style="font-size:.95rem;color:#1a1a2e;line-height:1.75;margin-bottom:6px">'+(p.oneLineSummary||'')+'</div><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:#7a7060">'+(p.amount?'<span>保額 '+p.amount+'</span>':'')+(p.since?'<span>生效 '+p.since+'</span>':'')+' </div>'+warn+copy+'</div>';}
+  function sec(title,sub){return '<h2 style="font-size:1.05rem;font-weight:700;letter-spacing:.04em;color:#7a5c20;border-bottom:2px solid #d4c9b0;padding-bottom:7px;margin:28px 0 6px">'+title+'</h2>'+(sub?'<div style="font-size:.85rem;color:#9a8c70;margin-bottom:14px">'+sub+'</div>':'<div style="margin-bottom:14px"></div>');}
 
-  var prosHtml=(r.pros||[]).map(proCard).join('');
+  // Top picks cards (the star section)
+  function topPicksHtml(){
+    if(!hasResearch)return '<div style="padding:14px 16px;background:rgba(44,62,122,.05);border:1px dashed rgba(44,62,122,.25);border-radius:9px;font-size:.92rem;color:#2c3e7a;line-height:1.7">尚未執行 Research 市場調查。建議到 Claude.ai 執行後貼回系統，即可在此列出指名道姓的具體投保建議。</div>';
+    var h='';
+    researchData.topPicks.forEach(function(p){
+      var rc=p.rank<=2?'#c0392b':p.rank<=4?'#e8a020':'#4a7c6f';
+      var rbg=p.rank<=2?'rgba(192,57,43,.04)':p.rank<=4?'rgba(232,160,32,.05)':'rgba(74,124,111,.04)';
+      h+='<div style="margin-bottom:14px;padding:16px 18px;background:'+rbg+';border:1px solid '+rc+'33;border-left:5px solid '+rc+';border-radius:0 10px 10px 0">'
+        +'<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">'
+        +'<span style="font-size:.8rem;font-weight:700;padding:3px 11px;border-radius:12px;background:'+rc+';color:#fff">第 '+(p.rank||'?')+' 順位</span>'
+        +'<span style="font-size:1.15rem;font-weight:700;color:#1a1a2e">'+(p.company||'')+' '+(p.product||'')+'</span>'
+        +(p.monthlyCost?'<span style="margin-left:auto;font-size:1rem;font-weight:600;color:'+rc+'">月費 '+p.monthlyCost+'</span>':'')
+        +'</div>'
+        +(p.gap?'<div style="font-size:.9rem;color:#7a5c20;margin-bottom:6px;font-weight:600">🎯 補強：'+p.gap+'</div>':'')
+        +(p.reason?'<div style="font-size:.95rem;color:#3a3428;line-height:1.8;margin-bottom:6px"><strong>推薦原因：</strong>'+p.reason+'</div>':'')
+        +(p.pros?'<div style="font-size:.92rem;color:#1a5c35;line-height:1.75;margin-bottom:3px">✅ 優點：'+p.pros+'</div>':'')
+        +(p.cons?'<div style="font-size:.92rem;color:#952020;line-height:1.75">⚠️ 注意：'+p.cons+'</div>':'')
+        +'</div>';
+    });
+    return h;
+  }
+
+  // Gap cards (concise)
+  function gapCard(g){var sev=g.severity||'medium';var col=sev==='high'?'#c0392b':sev==='medium'?'#e8a020':'#4a7c6f';var ic=sev==='high'?'🔴':sev==='medium'?'🟡':'🟢';return '<div style="margin-bottom:11px;padding:13px 15px;border-left:4px solid '+col+';background:rgba(0,0,0,.025);border-radius:0 8px 8px 0"><div style="font-weight:700;font-size:1.02rem;color:#1a1a2e;margin-bottom:4px">'+ic+' '+(g.type||g)+'</div>'+(g.headline?'<div style="font-size:.95rem;color:#444;line-height:1.7">'+g.headline+'</div>':'')+'</div>';}
+
+  function polCard(p){var paidBadge=p.paidUp==='是'?'<span style="font-size:.75rem;padding:2px 7px;border-radius:7px;background:rgba(39,174,96,.12);color:#1a7a44">✓ 已繳清</span>':'';var ageBadge=p.policyAge?'<span style="font-size:.75rem;padding:2px 7px;border-radius:7px;background:rgba(192,57,43,.08);color:#7a2020">'+p.policyAge+'</span>':'';return '<div style="margin-bottom:10px;padding:12px 15px;background:#faf7f0;border-radius:9px;border:1px solid #e8e0d0"><div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap"><span style="font-size:.78rem;padding:2px 8px;border-radius:7px;background:rgba(39,174,96,.1);color:#1a7a44">'+(p.type||'')+'</span><span style="font-size:.98rem;font-weight:600">'+(p.company||'')+' '+(p.product||'')+'</span>'+paidBadge+ageBadge+'</div><div style="font-size:.92rem;color:#3a3428;line-height:1.7">'+(p.oneLineSummary||'')+(p.amount?'　<span style="color:#9a8c70">保額 '+p.amount+'</span>':'')+'</div>'+(p.warning?'<div style="margin-top:6px;font-size:.85rem;color:#7a2020">⚠️ '+p.warning+'</div>':'')+'</div>';}
+
   var gapsHtml=(r.gaps||[]).map(gapCard).join('');
-  var recsHtml=(r.recommendations||[]).map(recCard).join('');
   var polsHtml=(r.existingPolicies||[]).map(polCard).join('');
-  var kpHtml=(r.keyPoints||r.summary||[]).map(function(s){return '<div style="display:flex;gap:10px;align-items:flex-start;font-size:1rem;line-height:1.8;margin-bottom:8px"><span style="color:#c8a96e;flex-shrink:0;font-size:1.1rem">◆</span><span>'+s+'</span></div>';}).join('');
-  var alertsHtml=(r.marketAlerts||[]).map(function(a){return '<div style="font-size:.95rem;color:#1a2456;line-height:1.75;margin-bottom:6px;padding:8px 12px;background:rgba(44,62,122,.06);border-radius:6px">⚡ '+a+'</div>';}).join('');
+  var prosHtml=(r.pros||[]).map(function(p){var t=typeof p==='object'?p.title:p;var d=typeof p==='object'?p.detail:'';return '<div style="margin-bottom:8px;font-size:.95rem;line-height:1.75;color:#2d5e3a">✓ <strong>'+t+'</strong>'+(d?'：'+d:'')+'</div>';}).join('');
+
+  // Plan from research if available, else from recommendations
+  var planShort=hasResearch&&researchData.plan&&researchData.plan.short?researchData.plan.short:plans.short;
+  var planMid=hasResearch&&researchData.plan&&researchData.plan.mid?researchData.plan.mid:plans.mid;
+  var planLong=hasResearch&&researchData.plan&&researchData.plan.long?researchData.plan.long:plans.long;
 
   var css='<style>'
-    +'@media screen{body{max-width:600px;}}'
-    +'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0 auto;padding:24px 18px 60px;color:#1a1a2e;background:#f5f0e8;font-size:17px;line-height:1.85;}'
-    +'h1{font-size:1.6rem;color:#c8a96e;margin-bottom:4px;font-weight:700;}'
-    +'.meta{font-size:.9rem;color:#7a7060;margin-bottom:20px;line-height:1.7;}'
-    +'.score-wrap{display:flex;align-items:center;gap:20px;padding:18px 20px;background:#fefcf7;border:2px solid '+scoreColor+';border-radius:12px;margin-bottom:16px;}'
+    +'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;max-width:620px;margin:0 auto;padding:24px 18px 60px;color:#1a1a2e;background:#faf6ee;font-size:17px;line-height:1.85;}'
+    +'h1{font-size:1.55rem;color:#a87a3a;margin-bottom:4px;font-weight:700;}'
+    +'.meta{font-size:.9rem;color:#9a8c70;margin-bottom:18px;line-height:1.7;}'
+    +'.score-wrap{display:flex;align-items:center;gap:18px;padding:18px 20px;background:#fff;border:2px solid '+scoreColor+';border-radius:12px;margin-bottom:16px;}'
     +'.score-num{font-size:2.6rem;font-weight:900;color:'+scoreColor+';line-height:1;}'
     +'.score-desc{font-size:1rem;color:#5a5448;line-height:1.65;}'
-    +'.urgent-box{padding:14px 16px;background:rgba(192,57,43,.07);border:2px solid rgba(192,57,43,.25);border-radius:10px;margin-bottom:12px;}'
-    +'.overall-box{padding:14px 16px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.2);border-radius:10px;margin-bottom:20px;font-size:1rem;line-height:1.85;}'
-    +'.plan-box{padding:12px 15px;border-radius:9px;margin-bottom:10px;font-size:.95rem;line-height:1.8;}'
-    +'.section-hr{border:none;border-top:3px solid #1a1a2e;margin:36px 0 24px;}'
-    +'.section-label{font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-bottom:4px;}'
-    +'.section-sub{font-size:.88rem;color:#7a7060;margin-bottom:18px;}'
-    +'.family-box{background:#fef9f0;border:2px solid #c8a96e;border-radius:12px;padding:20px;font-size:1rem;line-height:1.9;}'
-    +'.prof-box{background:#f0f2fa;border:2px solid #2c3e7a;border-radius:12px;padding:20px;}'
-    +'.prof-section{margin-bottom:14px;}'
-    +'.prof-label{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#2c3e7a;margin-bottom:5px;}'
-    +'.prof-val{font-size:.95rem;color:#1a1a2e;line-height:1.8;white-space:pre-line;}'
-    +'.research-box{background:#fff;border:1px solid rgba(44,62,122,.2);border-radius:10px;padding:16px;font-size:.9rem;line-height:1.85;white-space:pre-wrap;word-break:break-word;margin-top:10px;}'
-    +'.dp-box{background:#fff;border:1px solid rgba(44,62,122,.2);border-radius:8px;padding:14px;font-size:.8rem;line-height:1.8;white-space:pre-wrap;word-break:break-word;margin-top:8px;}'
-    +'.footer{font-size:.82rem;color:#a09880;margin-top:36px;padding-top:14px;border-top:1px solid #d4c9b0;line-height:1.75;}'
-    +'@media print{body{padding:16px;max-width:100%;}.section-hr{page-break-before:always;}}'
+    +'.star-band{background:linear-gradient(135deg,#f5e6c8,#faf0d8);border:2px solid #d4a85a;border-radius:13px;padding:18px 18px 6px;margin:18px 0 22px;}'
+    +'.star-title{font-size:1.15rem;font-weight:800;color:#8a5c1a;margin-bottom:4px;}'
+    +'.star-sub{font-size:.85rem;color:#a87a3a;margin-bottom:14px;}'
+    +'.urgent-box{padding:13px 16px;background:#fbeae8;border:2px solid #e0a59c;border-radius:10px;margin-bottom:12px;}'
+    +'.plan-box{padding:12px 15px;border-radius:9px;margin-bottom:9px;font-size:.95rem;line-height:1.8;}'
+    +'.footer{font-size:.82rem;color:#b0a48c;margin-top:36px;padding-top:14px;border-top:1px solid #e0d6c0;line-height:1.75;}'
+    +'@media print{body{padding:16px;background:#fff;}}'
     +'</style>';
 
-  // ── Section 1: Complete Analysis ──────────────────────────────────────────
-  var s1='<h1>🛡️ 保單智能分析報告</h1>'
-    +'<div class="meta">分析對象：'+memberName+(age?'　年齡：'+age+'歲':'')+(gender?'　性別：'+gender:'')+'<br>分析日期：'+now+'</div>'
-    +'<div class="score-wrap"><div class="score-num">'+score+'<span style="font-size:1rem;color:#7a7060">/100</span></div><div class="score-desc">'+(r.scoreDesc||'')+'</div></div>'
-    +(r.urgent?'<div class="urgent-box"><div style="font-size:.8rem;font-weight:700;color:#952020;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">🚨 最優先處理</div><div style="font-size:1.05rem;color:#7a2020;font-weight:600;line-height:1.75">'+r.urgent+'</div></div>':'')
-    +(alertsHtml?'<div style="padding:12px 15px;background:rgba(44,62,122,.06);border:1.5px solid rgba(44,62,122,.2);border-radius:10px;margin-bottom:12px"><div style="font-size:.82rem;font-weight:700;color:#2c3e7a;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">📢 2024 市場重要變化</div>'+alertsHtml+'</div>':'')
-    +(r.totalDeathBenefit?'<div style="padding:10px 14px;background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.25);border-radius:8px;font-size:.95rem;color:#5a4020;margin-bottom:10px">💰 <strong>身故保障合計：</strong>'+r.totalDeathBenefit+'</div>':'')
-    +(r.budgetPriority?'<div style="padding:10px 14px;background:rgba(74,124,111,.07);border:1px solid rgba(74,124,111,.2);border-radius:8px;font-size:.95rem;color:#1a5c35;margin-bottom:12px">⭐ <strong>預算有限時最值得優先補：</strong>'+r.budgetPriority+'</div>':'')
-    +(r.overallAdvice?'<div class="overall-box"><strong style="color:#2d5e54">💬 整體建議：</strong>'+r.overallAdvice+'</div>':'')
-    +sec('📋 重點摘要')+kpHtml
-    +sec('✅ 保障優點')+prosHtml
-    +sec('⚠️ 保障缺口')+gapsHtml
-    +sec('💡 補強建議（含行動步驟）')+recsHtml
-    +sec('📄 現有保單清單')+polsHtml
-    +sec('📅 短中長期規劃')
-    +'<div class="plan-box" style="background:rgba(192,57,43,.06);border-left:4px solid #c0392b"><strong style="color:#7a2020">🔴 短期（1年內）</strong><br>'+plans.short+'</div>'
-    +'<div class="plan-box" style="background:rgba(232,160,32,.06);border-left:4px solid #e8a020"><strong style="color:#7a5c20">🟡 中期（1~5年）</strong><br>'+plans.mid+'</div>'
-    +'<div class="plan-box" style="background:rgba(74,124,111,.06);border-left:4px solid #4a7c6f"><strong style="color:#2d5e54">🟢 長期（5年以上）</strong><br>'+plans.long+'</div>'
-    +(researchSummary?sec('🔍 Research 市場調查摘要')+'<div class="research-box">'+researchSummary+'</div>':'')
-    +sec('📋 Research Prompt（備用）')+'<div class="dp-box">'+dpText+'</div>';
-
-  // ── Section 2: Family Version ─────────────────────────────────────────────
-  var scoreLevel=score>=70?'整體保障不錯，基本保障已有':score>=40?'還好，有幾個地方需要補強':'需要注意，保障有些不夠';
-  var topGap=((r.gaps||[]).filter(function(g){return g.severity==='high';})[0])||(r.gaps||[])[0];
-  var topRec=(r.recommendations||[])[0];
-  var s2='<hr class="section-hr">'
-    +'<div class="family-box">'
-    +'<div class="section-label">👨‍👩‍👧 給家人的說明版</div>'
-    +'<div class="section-sub">口語化說明，讓家人快速了解保障狀況</div>'
-    +'<p style="margin-bottom:10px"><strong>📊 整體狀況：</strong>'+scoreLevel+'（'+score+' 分）</p>'
-    +(r.urgent?'<p style="margin-bottom:10px"><strong>🚨 最需要做的事：</strong>'+r.urgent+'</p>':'')
-    +(topGap?'<p style="margin-bottom:10px"><strong>⚠️ 主要缺口：</strong>'+(topGap.type||'')+'，'+(topGap.headline||'')+'</p>':'')
-    +(topRec?'<p style="margin-bottom:10px"><strong>💡 建議行動：</strong>'+(typeof topRec==='object'?topRec.title+(topRec.action?' — '+topRec.action:''):topRec)+'</p>':'')
-    +(r.overallAdvice?'<div style="margin-top:14px;padding:14px;background:rgba(200,169,110,.1);border-radius:9px;border-left:4px solid #c8a96e;font-size:1rem;line-height:1.85">'+r.overallAdvice+'</div>':'')
-    +(researchSummary?'<div style="margin-top:14px;padding:12px 14px;background:rgba(44,62,122,.06);border-radius:8px;font-size:.9rem;color:#2c3e7a;line-height:1.8"><strong>🔍 市場補強建議（摘要）：</strong><br>'+researchSummary.substring(0,400)+(researchSummary.length>400?'…':'')+'</div>':'')
-    +'<div style="margin-top:16px;padding:12px 14px;background:rgba(0,0,0,.04);border-radius:8px;font-size:.9rem;color:#5a5448;line-height:1.8">'
-    +'<strong>規劃方向：</strong><br>'
-    +'短期：'+plans.short.split('\n')[0]+'<br>'
-    +'中期：'+plans.mid.split('\n')[0]+'<br>'
-    +'長期：'+plans.long.split('\n')[0]
+  // ── REORDERED REPORT ──
+  var html='<h1>🛡️ 保單健檢與補強建議</h1>'
+    +'<div class="meta">分析對象：'+memberName+(age?'　'+age+'歲':'')+(gender?'　'+gender:'')+'　｜　'+now+'</div>'
+    // 1. 現況快照
+    +'<div class="score-wrap"><div class="score-num">'+score+'<span style="font-size:1rem;color:#9a8c70">/100</span></div><div class="score-desc">'+(r.scoreDesc||'')+'</div></div>'
+    +(r.urgent?'<div class="urgent-box"><div style="font-size:.8rem;font-weight:700;color:#952020;letter-spacing:.06em;margin-bottom:5px">🚨 最優先處理</div><div style="font-size:1.02rem;color:#7a2020;font-weight:600;line-height:1.7">'+r.urgent+'</div></div>':'')
+    // 2. 缺口（簡潔）
+    +sec('⚠️ 目前缺少的保障','現況最需要補強的項目')
+    +gapsHtml
+    // 3. ★ 重點推薦補強（最重要，放前面）
+    +'<div class="star-band">'
+    +'<div class="star-title">🎯 建議投保（具體商品 × 優先順序）</div>'
+    +'<div class="star-sub">'+(hasResearch?'依風險急迫性與CP值排序，可依預算逐步投保':'執行 Research 後將顯示指名道姓的商品建議')+'</div>'
+    +topPicksHtml()
     +'</div>'
-    +'</div>';
+    // 4. 短中長期規劃
+    +sec('📅 短中長期投保規劃','沒辦法一次買齊時的執行順序')
+    +'<div class="plan-box" style="background:#fbeae8;border-left:4px solid #c0392b"><strong style="color:#7a2020">🔴 短期（1年內）</strong><br>'+planShort+'</div>'
+    +'<div class="plan-box" style="background:#fcf2dc;border-left:4px solid #e8a020"><strong style="color:#7a5c20">🟡 中期（1~3年）</strong><br>'+planMid+'</div>'
+    +'<div class="plan-box" style="background:#e8f0ec;border-left:4px solid #4a7c6f"><strong style="color:#2d5e54">🟢 長期（3年以上）</strong><br>'+planLong+'</div>'
+    +(hasResearch&&researchData.claimNote?sec('🏥 理賠難易度參考','')+'<div style="font-size:.92rem;color:#3a3428;line-height:1.8;padding:12px 15px;background:#faf7f0;border-radius:9px">'+researchData.claimNote+'</div>':'')
+    // 5. 已有保單（補充，後段）
+    +sec('📄 目前已有的保單','現況保障清單，作為補充參考')
+    +polsHtml
+    +(r.totalDeathBenefit?'<div style="margin-top:8px;padding:10px 14px;background:#faf7f0;border-radius:8px;font-size:.92rem;color:#5a4020">💰 身故保障合計：'+r.totalDeathBenefit+'</div>':'')
+    // 6. 優點（補充）
+    +(prosHtml?sec('✅ 現有保單的優點','值得保留的部分')+prosHtml:'')
+    // footer
+    +'<div class="footer">本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理。<br>實際商品內容與費率以各保險公司公告為準，建議向業務員確認後投保。本報告不構成投保要約。</div>';
 
-  // ── Section 3: Professional Version ──────────────────────────────────────
-  var policySummary=(r.existingPolicies||[]).map(function(p){
-    return (p.company||'')+' '+(p.product||'')+'（'+(p.type||'）保額')+(p.amount||'—')+(p.paidUp==='是'?' 已繳清':'');
-  }).join('\n')||'詳見上方保單清單';
-  var gapSummary=(r.gaps||[]).map(function(g){
-    return (g.severity==='high'?'[🔴高]':'[🟡中]')+' '+(g.type||'')+'：'+(g.headline||'');
-  }).join('\n')||'無明顯缺口';
-  var recSummary=(r.recommendations||[]).map(function(rec,i){
-    var t=typeof rec==='object'?rec.title:rec;
-    var cost=typeof rec==='object'?rec.estimatedCost:'';
-    var cp=typeof rec==='object'?rec.cpValue:'';
-    return (i+1)+'. '+t+(cost?' 約'+cost+'/月':'')+(cp?' ｜CP值：'+cp:'');
-  }).join('\n');
-  var cpPick=(r.recommendations||[]).filter(function(rec){return (typeof rec==='object'?rec.priority:'')==='urgent';})[0];
-  var s3='<hr class="section-hr">'
-    +'<div class="prof-box">'
-    +'<div class="section-label">💼 給業務員的專業分析版</div>'
-    +'<div class="section-sub">含數據依據與具體建議，適合諮詢討論使用</div>'
-    +'<div class="prof-section"><div class="prof-label">保障完整度</div><div class="prof-val">'+score+'/100 分　'+( r.scoreDesc||'')+'</div></div>'
-    +'<div class="prof-section"><div class="prof-label">現有保障</div><div class="prof-val">'+policySummary+'</div></div>'
-    +'<div class="prof-section"><div class="prof-label">缺口評估</div><div class="prof-val">'+gapSummary+'</div></div>'
-    +'<div class="prof-section"><div class="prof-label">補強建議（優先順序）</div><div class="prof-val">'+recSummary+'</div></div>'
-    +(cpPick?'<div style="padding:12px 14px;background:rgba(44,62,122,.08);border-radius:8px;border-left:4px solid #2c3e7a;margin-top:8px"><div style="font-size:.82rem;font-weight:700;color:#2c3e7a;margin-bottom:5px">⭐ 高CP值首選</div><div style="font-size:.95rem;color:#1a1a2e;line-height:1.75">'+(typeof cpPick==='object'?cpPick.title+'\n'+( cpPick.reason||''):cpPick)+'</div></div>':'')
-    +(researchSummary?'<div class="prof-section" style="margin-top:14px"><div class="prof-label">Research 市場調查摘要</div><div class="research-box" style="font-size:.88rem">'+researchSummary+'</div></div>':'')
-    +'</div>';
-
-  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保單分析報告</title>'+css+'</head><body>'+s1+s2+s3+'<div class="footer">本報告由保單智能分析系統產生，分析前已對個人資料進行遮蔽處理。<br>實際理賠依各保單條款為準，建議諮詢合格保險顧問。不構成任何投保建議。</div></body></html>';
+  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保單健檢與補強建議</title>'+css+'</head><body>'+html+'</body></html>';
 }
 
 function doExport(){
